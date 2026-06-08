@@ -339,9 +339,12 @@ const map = L.map('map', {
   zoomControl: true,
   attributionControl: true,
   rotate: true,
-  bearing: 95,
+  bearing: 60,
   rotateControl: { closeOnZeroBearing: false }
 }).setView([46.232, 35.245], 14);
+
+// Принудительно выставляем bearing — иногда option в L.map({...}) не применяется
+if (typeof map.setBearing === 'function') map.setBearing(60);
 
 // Polygon layers cache, keyed by council code
 const polygonLayers = {};        // code → L.geoJSON
