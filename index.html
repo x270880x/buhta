@@ -322,7 +322,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet-rotate@0.2.8/dist/leaflet-rotate.min.js"></script>
-<script id="data" type="application/json">{"councils": [{"code": "2320355400", "name": "смт Кирилівка (Бирючий 12:001 + 11:003)", "lat": 46.2487, "lon": 35.2517, "region": "Запоріжжя", "total": 532, "area": 9796.0, "by_ownership": {}, "top_owners": [], "top_renters": [], "top_categories": [], "lease_years": {}}]}</script>
+<script id="data" type="application/json">{"councils": [{"code": "2320355400", "name": "смт Кирилівка (Бирючий 12:001 + 11:003)", "lat": 46.2487, "lon": 35.2517, "region": "Запоріжжя", "total": 531, "area": 120.7, "by_ownership": {}, "top_owners": [], "top_renters": [], "top_categories": [], "lease_years": {}}]}</script>
 <script>
 const DATA = JSON.parse(document.getElementById('data').textContent);
 const COUNCILS = DATA.councils;
@@ -420,7 +420,7 @@ function parcelStyle(f, council) {
   if (data && data.mz) {
     return { fillColor: fill, color: '#c050ff', weight: 2.5, fillOpacity: 0.6 };
   }
-  return { fillColor: fill, color: '#e8c547', weight: 1.5, fillOpacity: 0.45 };
+  return { fillColor: fill, color: '#e8c547', weight: 1.2, fillOpacity: 0.22 };
 }
 
 function buildParcelPopup(cad, data, council) {
