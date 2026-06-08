@@ -584,7 +584,7 @@ function buildMarkers() {
     const sz = markerSize(c.total);
     const col = markerColor(c, fs.count);
     const icon = L.divIcon({
-      html: `<div class="council-marker" style="width:${sz}px;height:${sz}px;background:${col};font-size:${Math.max(9, sz/4)}px">${fs.count}</div>`,
+      html: `<div class="council-marker" style="width:${sz}px;height:${sz}px;background:${col};font-size:${Math.max(9, sz/4)}px"></div>`,
       className: '', iconSize: [sz, sz], iconAnchor: [sz/2, sz/2]
     });
     const m = L.marker([c.lat, c.lon], { icon }).addTo(map);
@@ -603,6 +603,11 @@ function buildMarkers() {
 
   document.getElementById('hstat-filtered').textContent      = hasFilter ? fmt(totalCount) : '—';
   document.getElementById('hstat-filtered-area').textContent = hasFilter ? fmt(Math.round(totalArea * 10) / 10) : '—';
+  // Сумма по советам в шапку (вместо STATS.total_*)
+  const sumCount = COUNCILS.reduce((s,c) => s + (c.total || 0), 0);
+  const sumArea  = COUNCILS.reduce((s,c) => s + (c.area  || 0), 0);
+  document.getElementById('hstat-parcels').textContent = fmt(sumCount);
+  document.getElementById('hstat-area').textContent    = fmt(Math.round(sumArea * 10) / 10);
 }
 
 async function showDetail(code) {
