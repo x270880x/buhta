@@ -341,7 +341,7 @@ const map = L.map('map', {
   rotate: true,
   bearing: 60,
   rotateControl: { closeOnZeroBearing: false }
-}).setView([46.2290, 35.2418], 16);
+}).setView([46.2290, 35.2418], 17);
 
 // Принудительно выставляем bearing — иногда option в L.map({...}) не применяется
 if (typeof map.setBearing === 'function') map.setBearing(60);
