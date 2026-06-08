@@ -400,7 +400,7 @@ async function loadCouncilPolygons(code) {
         if (basket.has(cad)) l.setStyle({ color:'#ff0', weight:3, fillOpacity:0.7 });
       }
     });
-    if (polygonsVisible) layer.addTo(map);
+    layer.addTo(map);
     polygonLayers[code] = layer;
     return layer;
   } catch (e) {
@@ -425,7 +425,7 @@ function parcelStyle(f, council) {
   if (data && data.mz) {
     return { fillColor: fill, color: '#c050ff', weight: 2.5, fillOpacity: 0.6 };
   }
-  return { fillColor: fill, color: '#1a1a1a', weight: 0.6, fillOpacity: 0.5 };
+  return { fillColor: fill, color: '#e8c547', weight: 1.5, fillOpacity: 0.45 };
 }
 
 function buildParcelPopup(cad, data, council) {
@@ -449,10 +449,8 @@ function buildParcelPopup(cad, data, council) {
 }
 
 function togglePolygons() {
-  polygonsVisible = !polygonsVisible;
-  Object.values(polygonLayers).forEach(l => {
-    if (polygonsVisible) l.addTo(map); else map.removeLayer(l);
-  });
+  // Полигоны всегда видны — toggle отключён
+  Object.values(polygonLayers).forEach(l => { if (!map.hasLayer(l)) l.addTo(map); });
 }
 // Базовые слои
 const baseDark = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
