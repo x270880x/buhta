@@ -216,7 +216,7 @@
 
   /* Полупрозрачность всего слоя полигонов целиком —
      наложения не суммируются, цвет ровный */
-  .leaflet-overlay-pane svg { opacity: 0.5; }
+  .leaflet-overlay-pane svg { opacity: 1; }
 </style>
 </head>
 <body>
@@ -432,7 +432,8 @@ function parcelStyle(f, council) {
   // fillOpacity:1 → каждый полигон сплошной;
   // общую прозрачность даём CSS-ом на весь SVG-слой целиком,
   // чтобы наложения не накапливались и оттенок был ровным.
-  return { fillColor: fill, color: '#e8c547', weight: 1.2, fillOpacity: 1 };
+  // Яркие границы + прозрачная заливка (карта проступает)
+  return { fillColor: fill, color: '#ffd84a', weight: 2.2, opacity: 1, fillOpacity: 0.35 };
 }
 
 function buildParcelPopup(cad, data, council) {
