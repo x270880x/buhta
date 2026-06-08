@@ -321,7 +321,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet-rotate@0.2.8/dist/leaflet-rotate.min.js"></script>
-<script id="data" type="application/json">{"councils":[]}</script>
+<script id="data" type="application/json">{"councils": [{"code": "2320355400", "name": "смт Кирилівка (Бирючий 12:001)", "lat": 46.2513, "lon": 35.2517, "region": "Запоріжжя", "total": 395, "area": 9734.8, "by_ownership": {}, "top_owners": [], "top_renters": [], "top_categories": [], "lease_years": {}}]}</script>
 <script>
 const DATA = JSON.parse(document.getElementById('data').textContent);
 const COUNCILS = DATA.councils;
@@ -1249,6 +1249,8 @@ document.getElementById('renters-search').addEventListener('input', e => renderR
 buildMarkers();
 
 // Стартовая позиция — остров Бирючий (Кирилівська ОТГ)
+// Автоподгрузка контуров совета на старте
+setTimeout(() => loadCouncilPolygons('2320355400'), 100);
 // Если хочешь видеть всю карту — раскомментируй ниже:
 // const bounds = L.latLngBounds(COUNCILS.filter(c=>c.lat).map(c=>[c.lat,c.lon]));
 // map.fitBounds(bounds, { padding: [40, 40] });
