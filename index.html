@@ -343,7 +343,7 @@ const map = L.map('map', {
   rotateControl: { closeOnZeroBearing: false },
   zoomSnap: 0.1,
   zoomDelta: 0.5
-}).setView([46.2261, 35.2394], 16.1);
+}).setView([46.2266, 35.2383], 16.1);
 
 // Принудительно выставляем bearing — иногда option в L.map({...}) не применяется
 if (typeof map.setBearing === 'function') map.setBearing(60);
@@ -432,8 +432,8 @@ function parcelStyle(f, council) {
   // fillOpacity:1 → каждый полигон сплошной;
   // общую прозрачность даём CSS-ом на весь SVG-слой целиком,
   // чтобы наложения не накапливались и оттенок был ровным.
-  // Яркие границы + прозрачная заливка (карта проступает)
-  return { fillColor: fill, color: '#ffd84a', weight: 2.2, opacity: 1, fillOpacity: 0.35 };
+  // Яркие границы + ещё более прозрачная заливка (карта явно проступает)
+  return { fillColor: fill, color: '#ffd84a', weight: 2.2, opacity: 1, fillOpacity: 0.18 };
 }
 
 function buildParcelPopup(cad, data, council) {
