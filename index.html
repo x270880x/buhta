@@ -325,7 +325,7 @@ const FILTERS = DATA.filters;
 const RENTER_COUNCILS = DATA.renter_councils || {};
 
 // Init map
-const map = L.map('map', { zoomControl: true, attributionControl: true }).setView([46.88, 34.40], 10);
+const map = L.map('map', { zoomControl: true, attributionControl: true }).setView([46.232, 35.245], 13);
 
 // Polygon layers cache, keyed by council code
 const polygonLayers = {};        // code → L.geoJSON
@@ -1237,9 +1237,12 @@ renderSidebar();
 document.getElementById('renters-search').addEventListener('input', e => renderRentersList(e.target.value));
 buildMarkers();
 
-// Fit bounds to all councils
-const bounds = L.latLngBounds(COUNCILS.filter(c=>c.lat).map(c=>[c.lat,c.lon]));
-map.fitBounds(bounds, { padding: [40, 40] });
+// Стартовая позиция — остров Бирючий (Кирилівська ОТГ)
+// Подгружаю контуры Кирилівки сразу — иначе на старте пустая карта
+loadCouncilPolygons('2320355400');
+// Если хочешь видеть всю карту — раскомментируй ниже:
+// const bounds = L.latLngBounds(COUNCILS.filter(c=>c.lat).map(c=>[c.lat,c.lon]));
+// map.fitBounds(bounds, { padding: [40, 40] });
 </script>
 </body>
 </html>
