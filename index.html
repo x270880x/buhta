@@ -213,6 +213,10 @@
   .council-marker {
     display: none !important;
   }
+
+  /* Полупрозрачность всего слоя полигонов целиком —
+     наложения не суммируются, цвет ровный */
+  .leaflet-overlay-pane svg { opacity: 0.5; }
 </style>
 </head>
 <body>
@@ -420,7 +424,10 @@ function parcelStyle(f, council) {
   if (data && data.mz) {
     return { fillColor: fill, color: '#c050ff', weight: 2.5, fillOpacity: 0.6 };
   }
-  return { fillColor: fill, color: '#e8c547', weight: 1.2, fillOpacity: 0.22 };
+  // fillOpacity:1 → каждый полигон сплошной;
+  // общую прозрачность даём CSS-ом на весь SVG-слой целиком,
+  // чтобы наложения не накапливались и оттенок был ровным.
+  return { fillColor: fill, color: '#e8c547', weight: 1.2, fillOpacity: 1 };
 }
 
 function buildParcelPopup(cad, data, council) {
