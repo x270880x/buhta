@@ -412,15 +412,9 @@ async function loadCouncilPolygons(code) {
 function parcelStyle(f, council) {
   const cad = f.properties.cadnum;
   const data = council ? council.parcels.find(p => p.c === cad) : null;
-  let fill = '#888';
-  if (data) {
-    if (data.ot === 'Приватна власність') fill = '#4caf7d';
-    else if (data.ot === 'Комунальна власність') fill = '#e8c547';
-    else if (data.ot === 'Державна власність') fill = '#4a9eff';
-    else fill = '#e05252';
-  } else {
-    fill = '#3a3f55';
-  }
+  // По запросу: всё показываем как «Приватна власність» (зелёным),
+  // кроме «Державна власність» (синим)
+  let fill = (data && data.ot === 'Державна власність') ? '#4a9eff' : '#4caf7d';
   // Межевание сделано → толстая фиолетовая обводка
   if (data && data.mz) {
     return { fillColor: fill, color: '#c050ff', weight: 2.5, fillOpacity: 0.6 };
