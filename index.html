@@ -41,9 +41,10 @@
     color: var(--accent); letter-spacing: 2px; text-transform: uppercase;
   }
   header h1 { font-size: 17px; font-weight: 700; color: #fff; }
-  header .right { display: flex; gap: 24px; font-family: 'IBM Plex Mono', monospace; font-size: 14px; }
+  header .right { display: flex; gap: 24px; font-family: 'IBM Plex Mono', monospace; font-size: 17px; align-items: baseline; }
+  header .right > div { display: flex; align-items: baseline; gap: 6px; }
   header .right .v { color: var(--accent); font-weight: 600; }
-  header .right .l { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+  header .right .l { color: var(--muted); font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
 
   .layout { display: flex; flex: 1; min-height: 0; }
   aside.left {
