@@ -325,8 +325,8 @@
 <script>
 const DATA = JSON.parse(document.getElementById('data').textContent);
 const COUNCILS = DATA.councils;
-const STATS = DATA.stats;
-const FILTERS = DATA.filters;
+const STATS = DATA.stats || { ownership_split:{}, total_parcels:0, total_area:0, councils:0, top_renters:[] };
+const FILTERS = DATA.filters || { renters:[], ownership:[], categories:[], regions:[] };
 const RENTER_COUNCILS = DATA.renter_councils || {};
 
 // Init map
