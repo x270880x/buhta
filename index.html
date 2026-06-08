@@ -51,7 +51,9 @@
     width: 280px; background: var(--surface); border-right: 1px solid var(--border);
     overflow-y: auto; padding: 16px;
     flex-shrink: 0;
+    display: flex; flex-direction: column;
   }
+  aside.left .recent-block { margin-top: auto; }
   aside.right {
     width: 380px; background: var(--surface); border-left: 1px solid var(--border);
     overflow-y: auto; flex-shrink: 0; display: flex; flex-direction: column;
@@ -243,7 +245,7 @@
       <div id="search-results"></div>
     </div>
 
-    <div class="recent-block" style="margin-top:24px">
+    <div class="recent-block">
       <label style="display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Последние просмотренные</label>
       <div id="recent-list"></div>
     </div>
@@ -332,7 +334,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet-rotate@0.2.8/dist/leaflet-rotate.min.js"></script>
-<script id="data" type="application/json">{"councils": [{"code": "2320355400", "name": "смт Кирилівка (Бирючий 12:001 + 11:003)", "lat": 46.2487, "lon": 35.2517, "region": "Запоріжжя", "total": 531, "area": 120.7, "by_ownership": {}, "top_owners": [], "top_renters": [], "top_categories": [], "lease_years": {}}]}</script>
+<script id="data" type="application/json">{"councils": [{"code": "2320355400", "name": "смт Кирилівка (Бирючий 12:001 + 11:003)", "lat": 46.2487, "lon": 35.2517, "region": "Запоріжжя", "total": 502, "area": 120.6, "by_ownership": {}, "top_owners": [], "top_renters": [], "top_categories": [], "lease_years": {}}]}</script>
 <script>
 const DATA = JSON.parse(document.getElementById('data').textContent);
 const COUNCILS = DATA.councils;
