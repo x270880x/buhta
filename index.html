@@ -202,13 +202,23 @@
   @media (max-width: 900px) {
     aside.left, aside.right { width: 220px; }
   }
+
+  /* Минимальный UI — оставлен только поиск по кадастру */
+  .filter-group:not(:first-of-type),
+  #btn-export-all,
+  #btn-toggle-polys,
+  #btn-reset,
+  aside.left .stats-block,
+  header .right > div:nth-child(n+4) {
+    display: none !important;
+  }
 </style>
 </head>
 <body>
 <header>
   <div class="left">
     <div class="label">КАДАСТРОВАЯ КАРТА</div>
-    <h1>Нижнесерогозский р-н (Херсон) + Веселівський р-н (Запоріжжя)</h1>
+    <h1>Херсонская обл, Генический район, с. Бухта</h1>
   </div>
   <div class="right">
     <div><div class="v" id="hstat-parcels">0</div><div class="l">участков</div></div>
