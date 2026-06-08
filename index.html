@@ -243,6 +243,11 @@
       <div id="search-results"></div>
     </div>
 
+    <div class="recent-block" style="margin-top:24px">
+      <label style="display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Последние просмотренные</label>
+      <div id="recent-list"></div>
+    </div>
+
     <div class="filter-group">
       <label>Арендатор</label>
       <select id="filter-renter">
@@ -344,7 +349,7 @@ const map = L.map('map', {
   rotateControl: { closeOnZeroBearing: false },
   zoomSnap: 0.1,
   zoomDelta: 0.5
-}).setView([46.2266, 35.2383], 16.3);
+}).setView([46.2266, 35.2383], 16.2);
 
 // Принудительно выставляем bearing — иногда option в L.map({...}) не применяется
 if (typeof map.setBearing === 'function') map.setBearing(60);
@@ -1277,6 +1282,50 @@ document.addEventListener('click', e => {
 renderSidebar();
 document.getElementById('renters-search').addEventListener('input', e => renderRentersList(e.target.value));
 buildMarkers();
+
+// ── Последние просмотренные участки ──
+const RECENT_KEY = 'buhta_recent_v1';
+let recent = [];
+try { recent = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch(e) {}
+
+function renderRecent() {
+  const el = document.getElementById('recent-list');
+  if (!el) return;
+  if (!recent.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:11px;font-style:italic">(пусто)</div>';
+    return;
+  }
+  el.innerHTML = recent.slice(0, 5).map(r => `
+    <div class="recent-item" data-cad="${r.cad}" style="padding:6px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;margin-bottom:4px;cursor:pointer">
+      <div style="font-family:'IBM Plex Mono',monospace;color:var(--accent);font-size:10px;word-break:break-all">${r.cad}</div>
+      <div style="color:var(--muted);font-size:10px;margin-top:2px">${r.area} га</div>
+    </div>
+  `).join('');
+  el.querySelectorAll('.recent-item').forEach(it => {
+    it.onclick = () => { try { navigateToParcel(it.dataset.cad); } catch(e) { console.warn(e); } };
+    it.onmouseenter = () => it.style.borderColor = 'var(--accent)';
+    it.onmouseleave = () => it.style.borderColor = 'var(--border)';
+  });
+}
+
+function addRecent(cad, area) {
+  recent = [{cad, area}, ...recent.filter(r => r.cad !== cad)].slice(0, 5);
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(recent)); } catch(e) {}
+  renderRecent();
+}
+
+map.on('popupopen', e => {
+  const src = e.popup._source;
+  const cad = src && src.feature && src.feature.properties && src.feature.properties.cadnum;
+  if (!cad) return;
+  const code = cad.slice(0, 10);
+  const council = COUNCILS.find(c => c.code === code);
+  const data = council && council.parcels ? council.parcels.find(p => p.c === cad) : null;
+  const area = data ? data.a : '?';
+  addRecent(cad, area);
+});
+
+renderRecent();
 
 // Стартовая позиция — остров Бирючий (Кирилівська ОТГ)
 // Автоподгрузка контуров совета на старте
