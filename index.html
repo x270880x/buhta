@@ -238,7 +238,7 @@
 <div class="layout">
   <aside class="left">
     <div class="filter-group">
-      <label>Поиск (кадастр или ФИО/компания)</label>
+      <label>Поиск (кадастр или ФИО)</label>
       <input id="search" type="text" placeholder="" autocomplete="off"/>
       <div id="search-results"></div>
     </div>
@@ -633,6 +633,14 @@ function buildMarkers() {
   const sumArea  = COUNCILS.reduce((s,c) => s + (c.area  || 0), 0);
   document.getElementById('hstat-parcels').textContent = fmt(sumCount);
   document.getElementById('hstat-area').textContent    = fmt(Math.round(sumArea * 10) / 10);
+  // Склонение "участков" по числу
+  const n = sumCount, m10 = n % 10, m100 = n % 100;
+  let word;
+  if (m10 === 1 && m100 !== 11) word = 'участок';
+  else if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) word = 'участка';
+  else word = 'участков';
+  const lblEl = document.getElementById('hstat-parcels').nextElementSibling;
+  if (lblEl) lblEl.textContent = word;
 }
 
 async function showDetail(code) {
