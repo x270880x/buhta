@@ -454,14 +454,16 @@ function parcelStyle(f, council) {
   return { fillColor: fill, color: '#ffd84a', weight: 0.6, opacity: 1, fillOpacity: 0.18 };
 }
 
+const CHECK_ICON = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
 function copyCad(text, btn, ev) {
   if (ev) { ev.stopPropagation(); ev.preventDefault(); }
   const done = () => {
     const o = btn.innerHTML;
-    btn.innerHTML = '✓';
+    btn.innerHTML = CHECK_ICON;
     btn.style.background = '#2ecc40';
     btn.style.color = '#fff';
-    setTimeout(() => { btn.innerHTML = o; btn.style.background = ''; btn.style.color = ''; }, 1200);
+    btn.style.borderColor = '#2ecc40';
+    setTimeout(() => { btn.innerHTML = o; btn.style.background = ''; btn.style.color = ''; btn.style.borderColor = ''; }, 1200);
   };
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
