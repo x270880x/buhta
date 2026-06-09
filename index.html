@@ -443,6 +443,26 @@ function findSmallestParcelAt(ll) {
   return best;
 }
 
+// Карта вложенности: cad контейнера → [layer вложенных участков]
+const nestedMap = {};
+function computeNested(layer) {
+  const items = [];
+  layer.eachLayer(l => {
+    const cad = l.feature.properties.cadnum;
+    items.push({ l, cad, b: l.getBounds(), a: parcelArea(cad), ctr: l.getBounds().getCenter() });
+  });
+  items.forEach(big => {
+    const nested = [];
+    items.forEach(small => {
+      if (small.cad === big.cad) return;
+      if (small.a < big.a && big.b.contains(small.ctr) && parcelContains(small.ctr, big.l.feature)) {
+        nested.push(small.l);
+      }
+    });
+    if (nested.length) nestedMap[big.cad] = nested;
+  });
+}
+
 // Упорядочить полигоны по площади: большие вниз, мелкие наверх —
 // чтобы вложенные/перекрытые участки оставались кликабельными
 function reorderByArea(layer, council) {
@@ -473,10 +493,20 @@ async function loadCouncilPolygons(code) {
         l.on('mouseover', () => {
           l.bringToFront(); // поднять наверх — иначе соседи перекрывают часть обводки
           if (!basket.has(cad)) l.setStyle({ weight: 3, color: '#fff' });
+          // Если это контейнер — поднять вложенные наверх и обвести их (видны + кликабельны)
+          const nested = nestedMap[cad];
+          if (nested) nested.forEach(nl => {
+            nl.bringToFront();
+            if (!basket.has(nl.feature.properties.cadnum)) nl.setStyle({ weight: 2, color: '#fff' });
+          });
         });
         l.on('mouseout', () => {
           if (basket.has(cad)) l.setStyle({ color:'#ff0', weight:3, fillOpacity:0.7 });
           else layer.resetStyle(l);
+          const nested = nestedMap[cad];
+          if (nested) nested.forEach(nl => {
+            if (!basket.has(nl.feature.properties.cadnum)) layer.resetStyle(nl);
+          });
           reorderByArea(layer, council); // вернуть z-порядок: вложенные снова сверху
         });
         // Shift+click — добавить/убрать из корзины
@@ -492,6 +522,7 @@ async function loadCouncilPolygons(code) {
     });
     layer.addTo(map);
     reorderByArea(layer, council); // большие вниз, мелкие наверх → вложенные кликабельны
+    computeNested(layer); // предвычислить вложенность для подсветки при наведении
     polygonLayers[code] = layer;
     if (!map._smallestClickBound) {
       map._smallestClickBound = true;
