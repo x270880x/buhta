@@ -399,6 +399,50 @@ async function ensureCouncilParcels(council) {
   return result;
 }
 
+// Площадь участка по кадастру
+function parcelArea(cad) {
+  const c = COUNCILS.find(x => x.code === cad.slice(0, 10));
+  const d = c && c.parcels ? c.parcels.find(p => p.c === cad) : null;
+  return d ? (d.a || 0) : Infinity;
+}
+// Точка внутри кольца (ray-casting)
+function pointInRing(lng, lat, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
+    if (((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi + 1e-20) + xi)) inside = !inside;
+  }
+  return inside;
+}
+// Точка внутри участка (с учётом дырок)
+function parcelContains(ll, feature) {
+  const g = feature.geometry;
+  const polys = g.type === 'Polygon' ? [g.coordinates] : g.coordinates;
+  for (const poly of polys) {
+    if (pointInRing(ll.lng, ll.lat, poly[0])) {
+      let hole = false;
+      for (let i = 1; i < poly.length; i++) if (pointInRing(ll.lng, ll.lat, poly[i])) { hole = true; break; }
+      if (!hole) return true;
+    }
+  }
+  return false;
+}
+// Найти САМЫЙ МЕЛКИЙ видимый участок под точкой (самый конкретный)
+function findSmallestParcelAt(ll) {
+  let best = null, bestA = Infinity;
+  for (const code in polygonLayers) {
+    polygonLayers[code].eachLayer(l => {
+      const el = l.getElement && l.getElement();
+      if (el && el.style.display === 'none') return; // скрыт фильтром
+      if (parcelContains(ll, l.feature)) {
+        const a = parcelArea(l.feature.properties.cadnum);
+        if (a < bestA) { bestA = a; best = l; }
+      }
+    });
+  }
+  return best;
+}
+
 // Упорядочить полигоны по площади: большие вниз, мелкие наверх —
 // чтобы вложенные/перекрытые участки оставались кликабельными
 function reorderByArea(layer, council) {
@@ -449,6 +493,16 @@ async function loadCouncilPolygons(code) {
     layer.addTo(map);
     reorderByArea(layer, council); // большие вниз, мелкие наверх → вложенные кликабельны
     polygonLayers[code] = layer;
+    if (!map._smallestClickBound) {
+      map._smallestClickBound = true;
+      // Клик по карте → открыть попап самого мелкого участка под точкой
+      // (надёжнее SVG z-order при наложениях участков)
+      map.on('click', e => {
+        if (e.originalEvent && e.originalEvent.shiftKey) return; // shift = корзина
+        const best = findSmallestParcelAt(e.latlng);
+        if (best) best.openPopup(e.latlng);
+      });
+    }
     return layer;
   } catch (e) {
     console.warn(`No polygons for ${code}:`, e);
