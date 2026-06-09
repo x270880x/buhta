@@ -507,7 +507,7 @@ function buildParcelPopup(cad, data, council) {
       ${data.o ? `<div><b style="color:#aaa">владелец:</b> ${data.o}</div>` : ''}
       ${data.r ? `<div><b style="color:#aaa">аренд.:</b> ${data.r}</div>` : ''}
       ${data.ed ? `<div><b style="color:#aaa">договор до:</b> <span style="color:${expColor}">${data.ed}</span>${data.cn?` · №${data.cn}`:''}</div>` : ''}
-      ${data.cadrf ? `<div style="margin-top:4px"><b style="color:#aaa">кадастровый номер РФ:</b> <span style="font-family:'IBM Plex Mono',monospace;color:#e8c547">${data.cadrf}</span>${COPY_BTN(data.cadrf)}</div>` : ''}
+      ${data.cadrf ? `<div style="margin-top:4px"><b style="color:#aaa">кадастровый РФ:</b> <span style="font-family:'IBM Plex Mono',monospace;color:#e8c547">${data.cadrf}</span>${COPY_BTN(data.cadrf)}</div>` : ''}
       ${data.egrn ? `<div style="color:#4caf7d;font-weight:600;margin-top:2px">✓ оформлен ЕГРН${(typeof data.egrn==='string' && data.egrn && data.egrn!=='да') ? ` · ${data.egrn}` : ''}</div>` : ''}
       ${otRu ? `<div style="color:#aaa;font-size:12px;margin-top:6px">${otRu}</div>` : ''}
     </div>`;
