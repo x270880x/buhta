@@ -454,8 +454,15 @@ function parcelStyle(f, council) {
   return { fillColor: fill, color: '#ffd84a', weight: 0.6, opacity: 1, fillOpacity: 0.18 };
 }
 
-function copyCad(text, btn) {
-  const done = () => { const o = btn.innerHTML; btn.innerHTML = '✓'; btn.style.color = '#4caf7d'; setTimeout(() => { btn.innerHTML = o; btn.style.color = ''; }, 1000); };
+function copyCad(text, btn, ev) {
+  if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+  const done = () => {
+    const o = btn.innerHTML;
+    btn.innerHTML = '✓';
+    btn.style.background = '#2ecc40';
+    btn.style.color = '#fff';
+    setTimeout(() => { btn.innerHTML = o; btn.style.background = ''; btn.style.color = ''; }, 1200);
+  };
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
   } else { fallbackCopy(text, done); }
@@ -468,7 +475,7 @@ function fallbackCopy(text, done) {
   document.body.removeChild(ta);
 }
 const COPY_ICON = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
-const COPY_BTN = (txt) => `<button onclick="copyCad('${txt}',this)" title="копировать" style="margin-left:6px;padding:2px 6px;background:var(--accent);color:#1a1a1a;border:none;border-radius:3px;cursor:pointer;vertical-align:middle;line-height:0">${COPY_ICON}</button>`;
+const COPY_BTN = (txt) => `<button onclick="copyCad('${txt}',this,event)" title="копировать" style="margin-left:6px;padding:2px 6px;background:var(--accent);color:#1a1a1a;border:none;border-radius:3px;cursor:pointer;vertical-align:middle;line-height:0">${COPY_ICON}</button>`;
 
 function buildParcelPopup(cad, data, council) {
   const inBasket = basket.has(cad);
