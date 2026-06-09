@@ -442,22 +442,12 @@ async function loadCouncilPolygons(code) {
 function parcelStyle(f, council) {
   const cad = f.properties.cadnum;
   const data = council ? council.parcels.find(p => p.c === cad) : null;
-  // По запросу:
-  //   2320355400:11:003:0002 — светло-голубой
-  //   Державна власність   — светло-розовый
-  //   остальные             — светло-салатовые
-  let fill;
-  if (cad === '2320355400:11:003:0002') fill = '#a8d5ff';
-  else if (data && data.ot === 'Державна власність') fill = '#ffc4d6';
-  else fill = '#c8e89c';
-  // Межевание сделано → толстая фиолетовая обводка
-  if (data && data.mz) {
-    return { fillColor: fill, color: '#c050ff', weight: 2.5, fillOpacity: 0.6 };
+  // Зарегистрирован в ЕГРН (РФ) → синяя обводка + голубая заливка
+  if (data && data.egrn) {
+    return { fillColor: '#5bb8ff', color: '#1565c0', weight: 2.6, opacity: 1, fillOpacity: 0.45 };
   }
-  // fillOpacity:1 → каждый полигон сплошной;
-  // общую прозрачность даём CSS-ом на весь SVG-слой целиком,
-  // чтобы наложения не накапливались и оттенок был ровным.
-  // Яркие границы + ещё более прозрачная заливка (карта явно проступает)
+  // Государственная собственность → розовая заливка; остальные — салатовые
+  const fill = (data && data.ot === 'Державна власність') ? '#ffc4d6' : '#c8e89c';
   return { fillColor: fill, color: '#ffd84a', weight: 2.2, opacity: 1, fillOpacity: 0.18 };
 }
 
@@ -1392,12 +1382,6 @@ function applyEgrnFilter() {
       else if (egrnMode === 'other') visible = !has;
       const el = l.getElement && l.getElement();
       if (el) el.style.display = visible ? '' : 'none';
-      // в режиме «только с ЕГРН» подсвечиваем оформленные зелёным
-      if (egrnMode === 'egrn' && has) {
-        l.setStyle({ fillColor: '#2ecc40', color: '#1ea832', fillOpacity: 0.65, weight: 2.5 });
-      } else {
-        layer.resetStyle(l);
-      }
     });
   });
 }
