@@ -221,11 +221,14 @@
      наложения не суммируются, цвет ровный */
   .leaflet-overlay-pane svg { opacity: 1; }
 
-  .egrn-control { padding: 8px 10px !important; margin-top: 8px !important; min-width: 150px; }
+  .leaflet-control-layers { min-width: 158px; }
+  .egrn-control { padding: 6px 8px !important; margin-top: 8px !important; min-width: 158px; }
+  .egrn-control > div:first-child { font-size: 9px !important; margin-bottom: 4px !important; }
+  #egrn-filter { gap: 3px !important; }
   .egrn-btn {
-    padding: 7px 10px; background: var(--surface2); color: var(--text);
-    border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
-    font-family: inherit; font-size: 12px; text-align: left; transition: all 0.12s; width: 100%;
+    padding: 4px 8px; background: var(--surface2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 3px; cursor: pointer;
+    font-family: inherit; font-size: 11px; text-align: left; transition: all 0.12s; width: 100%;
   }
   .egrn-btn:hover { border-color: var(--green); }
   .egrn-btn.active { background: var(--green); color: #fff; border-color: var(--green); font-weight: 600; }
