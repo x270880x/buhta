@@ -399,6 +399,16 @@ async function ensureCouncilParcels(council) {
   return result;
 }
 
+// Упорядочить полигоны по площади: большие вниз, мелкие наверх —
+// чтобы вложенные/перекрытые участки оставались кликабельными
+function reorderByArea(layer, council) {
+  const areaOf = cad => { const d = (council.parcels || []).find(p => p.c === cad); return d ? (d.a || 0) : 0; };
+  const ls = [];
+  layer.eachLayer(l => ls.push(l));
+  ls.sort((a, b) => areaOf(b.feature.properties.cadnum) - areaOf(a.feature.properties.cadnum));
+  ls.forEach(l => l.bringToFront()); // большой первый уходит вниз, мелкий последний — наверх
+}
+
 async function loadCouncilPolygons(code) {
   if (polygonLayers[code]) return polygonLayers[code];
   const council = COUNCILS.find(c => c.code === code);
@@ -423,6 +433,7 @@ async function loadCouncilPolygons(code) {
         l.on('mouseout', () => {
           if (basket.has(cad)) l.setStyle({ color:'#ff0', weight:3, fillOpacity:0.7 });
           else layer.resetStyle(l);
+          reorderByArea(layer, council); // вернуть z-порядок: вложенные снова сверху
         });
         // Shift+click — добавить/убрать из корзины
         l.on('click', e => {
@@ -436,13 +447,7 @@ async function loadCouncilPolygons(code) {
       }
     });
     layer.addTo(map);
-    // Упорядочить по площади: большие участки вниз, мелкие наверх —
-    // чтобы вложенные/перекрытые участки оставались кликабельными
-    const areaOf = cad => { const d = (council.parcels || []).find(p => p.c === cad); return d ? (d.a || 0) : 0; };
-    const ls = [];
-    layer.eachLayer(l => ls.push(l));
-    ls.sort((a, b) => areaOf(b.feature.properties.cadnum) - areaOf(a.feature.properties.cadnum));
-    ls.forEach(l => l.bringToFront()); // большой первый уходит вниз, мелкий последний — наверх
+    reorderByArea(layer, council); // большие вниз, мелкие наверх → вложенные кликабельны
     polygonLayers[code] = layer;
     return layer;
   } catch (e) {
