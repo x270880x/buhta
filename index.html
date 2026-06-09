@@ -1340,10 +1340,12 @@ function renderRecent() {
     el.innerHTML = '<div style="color:var(--muted);font-size:11px;font-style:italic">(пусто)</div>';
     return;
   }
-  el.innerHTML = recent.slice(0, 5).map(r => `
+  const esc = s => String(s == null ? '' : s).replace(/[<>&"]/g, m => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[m]));
+  el.innerHTML = recent.slice(0, 10).map(r => `
     <div class="recent-item" data-cad="${r.cad}" style="padding:6px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;margin-bottom:4px;cursor:pointer">
-      <div style="font-family:'IBM Plex Mono',monospace;color:var(--accent);font-size:10px;word-break:break-all">${r.cad}</div>
-      <div style="color:var(--muted);font-size:10px;margin-top:2px">${r.area} га</div>
+      <div style="font-family:'IBM Plex Mono',monospace;color:var(--accent);font-size:10px;word-break:break-all">${r.cad}${r.egrn ? ' <span style="color:#4caf7d">✓ЕГРН</span>' : ''}</div>
+      <div style="color:#d8dce8;font-size:10px;margin-top:2px">${r.area} га${r.zn ? ' · ' + esc(r.zn) : ''}</div>
+      ${r.o ? `<div style="color:var(--muted);font-size:10px;margin-top:1px;word-break:break-word">${esc(r.o)}</div>` : ''}
     </div>
   `).join('');
   el.querySelectorAll('.recent-item').forEach(it => {
@@ -1353,8 +1355,8 @@ function renderRecent() {
   });
 }
 
-function addRecent(cad, area) {
-  recent = [{cad, area}, ...recent.filter(r => r.cad !== cad)].slice(0, 5);
+function addRecent(rec) {
+  recent = [rec, ...recent.filter(r => r.cad !== rec.cad)].slice(0, 10);
   try { localStorage.setItem(RECENT_KEY, JSON.stringify(recent)); } catch(e) {}
   renderRecent();
 }
@@ -1366,8 +1368,7 @@ map.on('popupopen', e => {
   const code = cad.slice(0, 10);
   const council = COUNCILS.find(c => c.code === code);
   const data = council && council.parcels ? council.parcels.find(p => p.c === cad) : null;
-  const area = data ? data.a : '?';
-  addRecent(cad, area);
+  addRecent({ cad, area: data ? data.a : '?', zn: data ? data.zn : '', o: data ? data.o : '', egrn: data ? !!data.egrn : false });
 });
 
 renderRecent();
