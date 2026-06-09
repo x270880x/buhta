@@ -401,7 +401,8 @@ async function loadCouncilPolygons(code) {
         const data = (council.parcels || []).find(p => p.c === cad);
         l.bindPopup(buildParcelPopup(cad, data, council));
         l.on('mouseover', () => {
-          if (!basket.has(cad)) l.setStyle({ weight: 2, color: '#fff' });
+          l.bringToFront(); // поднять наверх — иначе соседи перекрывают часть обводки
+          if (!basket.has(cad)) l.setStyle({ weight: 3, color: '#fff' });
         });
         l.on('mouseout', () => {
           if (basket.has(cad)) l.setStyle({ color:'#ff0', weight:3, fillOpacity:0.7 });
