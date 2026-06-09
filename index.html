@@ -1377,7 +1377,8 @@ renderRecent();
 let egrnMode = 'all';
 function applyEgrnFilter() {
   const c = COUNCILS.find(x => x.code === '2320355400');
-  const egrnSet = new Set((c?.parcels || []).filter(p => p.egrn).map(p => p.c));
+  const parcels = c?.parcels || [];
+  const egrnSet = new Set(parcels.filter(p => p.egrn).map(p => p.c));
   Object.values(polygonLayers).forEach(layer => {
     layer.eachLayer(l => {
       const cad = l.feature.properties.cadnum;
@@ -1389,6 +1390,18 @@ function applyEgrnFilter() {
       if (el) el.style.display = visible ? '' : 'none';
     });
   });
+  // Пересчёт шапки под выбранный фильтр
+  let shown = parcels;
+  if (egrnMode === 'egrn') shown = parcels.filter(p => p.egrn);
+  else if (egrnMode === 'other') shown = parcels.filter(p => !p.egrn);
+  const cnt = shown.length;
+  const area = Math.round(shown.reduce((s, p) => s + (p.a || 0), 0) * 10) / 10;
+  document.getElementById('hstat-parcels').textContent = fmt(cnt);
+  document.getElementById('hstat-area').textContent = fmt(area);
+  const m10 = cnt % 10, m100 = cnt % 100;
+  const word = (m10 === 1 && m100 !== 11) ? 'участок' : (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) ? 'участка' : 'участков';
+  const lbl = document.getElementById('hstat-parcels').nextElementSibling;
+  if (lbl) lbl.textContent = word;
 }
 document.querySelectorAll('.egrn-btn').forEach(btn => {
   btn.addEventListener('click', () => {
