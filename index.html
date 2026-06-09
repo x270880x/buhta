@@ -459,16 +459,19 @@ async function loadCouncilPolygons(code) {
 function parcelStyle(f, council) {
   const cad = f.properties.cadnum;
   const data = council ? council.parcels.find(p => p.c === cad) : null;
+  // Крупные участки часто содержат внутри вложенные — даём им слабую заливку,
+  // чтобы внутренние участки просвечивали и были видны
+  const big = data && (data.a || 0) > 0.2;
   // Зарегистрирован в ЕГРН (РФ) → голубая заливка (обводка везде жёлтая)
   if (data && data.egrn) {
-    return { fillColor: '#5bb8ff', color: '#ffd84a', weight: 0.8, opacity: 1, fillOpacity: 0.45 };
+    return { fillColor: '#5bb8ff', color: '#ffd84a', weight: 0.8, opacity: 1, fillOpacity: big ? 0.13 : 0.45 };
   }
   // Государственная собственность → насыщенно-розовая заливка (заметнее)
   if (data && data.ot === 'Державна власність') {
-    return { fillColor: '#ff4d94', color: '#ffd84a', weight: 0.6, opacity: 1, fillOpacity: 0.45 };
+    return { fillColor: '#ff4d94', color: '#ffd84a', weight: 0.6, opacity: 1, fillOpacity: big ? 0.15 : 0.45 };
   }
   // остальные — салатовые
-  return { fillColor: '#c8e89c', color: '#ffd84a', weight: 0.6, opacity: 1, fillOpacity: 0.18 };
+  return { fillColor: '#c8e89c', color: '#ffd84a', weight: 0.6, opacity: 1, fillOpacity: big ? 0.06 : 0.18 };
 }
 
 const CHECK_ICON = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
