@@ -445,9 +445,9 @@ async function loadCouncilPolygons(code) {
 function parcelStyle(f, council) {
   const cad = f.properties.cadnum;
   const data = council ? council.parcels.find(p => p.c === cad) : null;
-  // Зарегистрирован в ЕГРН (РФ) → синяя обводка + голубая заливка
+  // Зарегистрирован в ЕГРН (РФ) → голубая заливка (обводка везде жёлтая)
   if (data && data.egrn) {
-    return { fillColor: '#5bb8ff', color: '#1565c0', weight: 0.8, opacity: 1, fillOpacity: 0.45 };
+    return { fillColor: '#5bb8ff', color: '#ffd84a', weight: 0.8, opacity: 1, fillOpacity: 0.45 };
   }
   // Государственная собственность → розовая заливка; остальные — салатовые
   const fill = (data && data.ot === 'Державна власність') ? '#ffc4d6' : '#c8e89c';
