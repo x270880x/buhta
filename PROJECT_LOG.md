@@ -1,0 +1,179 @@
+# Бухта — кадастровая карта · ЛОГ ПРОЕКТА
+
+**Сайт:** https://x270880x.github.io/buhta/
+**Репозиторий:** x270880x/buhta (GitHub Pages, ветка main)
+**Источник данных:** traidoptmarketnew/kadastr-nyzhni-sirohozy (офиц. кадастр ДЗК Украины) + Excel «кадастровые_бирючий апрель 2026»
+
+---
+
+## Что это
+Интерактивная кадастровая карта на Leaflet (одностраничный index.html, без бэкенда).
+Покрытие: остров/коса **Бирючий**, с. Бухта, Генический район, Херсонская обл.
+Кварталы: `2320355400:12:001` (Бирючий) + `2320355400:11:003`.
+
+## Структура репо
+- `index.html` — вся карта (Leaflet + leaflet-rotate, встроенный manifest советов)
+- `councils/2320355400.json` — метаданные участков (владелец, площадь, массив, ЕГРН, РФ-номер…)
+- `parcels/2320355400.geojson` — геометрия участков (полигоны)
+- `robots.txt` — запрет индексации
+
+## Поля участка (councils JSON)
+- `c` — кадастр (укр), `a` — площадь (га), `o` — владелец, `ot` — форма собственности
+- `zn` — массив/посёлок, `st` — статус (р/с/с+, сырое из Excel), `pd` — п/д (Excel)
+- `cadrf` — кадастровый номер РФ, `egrn` — оформлен в ЕГРН (да)
+- `ct` — целевое назначение (ВРИ), `ad` — адрес
+
+## Цветовая легенда
+- 🔵 голубой (синяя→жёлтая обводка) — оформлен в ЕГРН (РФ)
+- 🩷 ярко-розовый — государственная собственность (Державна власність)
+- 🟢 салатовый — остальные (частные/коммунальные)
+- крупные участки (>0.2 га) — слабая заливка (вложенные просвечивают)
+
+## Ключевой функционал
+- Поворот карты (bearing 60°, коса горизонтально), старт zoom 16.2 на Бирючем
+- Фильтр ЕГРН (Все / Только с ЕГРН / Без ЕГРН) — справа, пересчитывает шапку
+- Поиск по кадастру/ФИО
+- Попап: кадастр+копи, площадь, массив, владелец, РФ-номер+копи, ✓ЕГРН, форма собств.
+- «Последние просмотренные» (слева, 10 шт, localStorage) — с РФ-номером
+- Клик по наложенным участкам — открывает самый мелкий (геометрический hit-test)
+- Наведение на контейнер — подсветка+подъём вложенных участков
+
+## Текущее состояние (2026-06-09)
+- участков в базе: 524 (полигонов на карте: 522)
+- оформлено в ЕГРН: 54 (7.26 га)
+- государственных: 8
+
+### ЕГРН по владельцам
+- 15 — Скрипник В.В., Скрипник А.В.
+- 13 — Громов О.
+- 10 — Моршнев Станислав
+- 7 — Яков Кацович и ко.
+- 3 — Громов Леонід Іванович
+- 2 — (нет)
+- 1 — Крикунов А.С.
+- 1 — Алекасндр и Ирина Нагорные
+- 1 — Громов Олег Леонідович
+- 1 — Громова Валентина Миколаївна
+
+## Полная история коммитов (новые сверху)
+- 2026-06-09 22:22 — 12:001:0080 (З.Берег): ЕГРН 96:01:0005445:31 + owner → Крикунов А.С.
+- 2026-06-09 21:16 — recent-viewed: show РФ cadnum (blue) when present
+- 2026-06-09 21:02 — hover container: lift + white-outline all nested parcels (visible & clickable on top)
+- 2026-06-09 20:52 — style: uniform blue fill for ALL ЕГРН parcels (0.42) regardless of size
+- 2026-06-09 20:42 — click: open smallest parcel under point (geometric hit-test) — fixes overlapping/nested parcels not clickable
+- 2026-06-09 20:31 — style: large container parcels get faint fill so nested parcels show through
+- 2026-06-09 20:26 — owner: revert 0238 back to Яков Кацович и ко. (keep ЕГРН)
+- 2026-06-09 20:23 — owner: 16 parcels → Скрипник В.В., Скрипник А.В. (+confirm ЕГРН)
+- 2026-06-09 19:51 — fix: restore z-order on mouseout — hovering a container no longer covers nested parcels
+- 2026-06-09 19:45 — ЕГРН batch: 16 Скрипники/Яков parcels (280-298, 43, 44)
+- 2026-06-09 19:43 — fix: z-order parcels by area (big below, small above) so nested parcels are clickable
+- 2026-06-09 16:17 — seo: title/description → 'Бухта — кадастровая карта'
+- 2026-06-09 16:15 — seo: title/description → 'Кадастровая карта. БУХТА'; block indexing (robots.txt + meta)
+- 2026-06-09 15:59 — ЕГРН batch: 20 Громов parcels
+- 2026-06-09 14:40 — style: government parcels brighter pink (#ff4d94, opacity 0.45)
+- 2026-06-09 14:19 — style: yellow outlines everywhere (ЕГРН keeps blue fill but yellow border too)
+- 2026-06-09 14:17 — 0412: add ЕГРН + РФ cadnum 96:01:0005445:43
+- 2026-06-09 14:16 — fix: remove 8 inner-ring artifacts from 0412 (clean highlight); copy ✓ as matched-size SVG
+- 2026-06-09 13:29 — copy button: black bg, yellow border, yellow icon outline
+- 2026-06-09 13:27 — copy: stopPropagation so popup stays open; green ✓ feedback on copy
+- 2026-06-09 13:25 — ЕГРН batch: 10 parcels (0296-0304, 0119, 0299-0302, 0310)
+- 2026-06-09 13:14 — egrn filter: update header count + area to match filtered set (with declension)
+- 2026-06-09 13:09 — recent-viewed: show full info (area/массив/владелец/✓ЕГРН), increase 5→10
+- 2026-06-09 13:06 — 11:003:0069 (Гольфстрим): add ЕГРН + РФ 96:01:0005445:5
+- 2026-06-09 13:03 — ЕГРН: 0250→...:25, 0399→...:275
+- 2026-06-09 13:02 — 0137: add ЕГРН + РФ cadnum 96:01:0005445:232
+- 2026-06-09 13:01 — 0325: add ЕГРН + РФ cadnum 96:01:0005445:274
+- 2026-06-09 12:59 — 0130: add ЕГРН + РФ cadnum 96:01:0005445:42
+- 2026-06-09 12:57 — 0289: add ЕГРН + РФ cadnum 96:01:0005445:29
+- 2026-06-09 12:56 — copy button: classic copy icon (square-in-square SVG) on bright accent bg
+- 2026-06-09 12:50 — parcels: thinner outlines for all (yellow 1.1→0.6, blue ЕГРН 1.3→0.8)
+- 2026-06-09 12:47 — parcels: halve outline width (yellow 2.2→1.1, blue ЕГРН 2.6→1.3)
+- 2026-06-09 12:35 — egrn control: thinner buttons, same 158px width as layers control
+- 2026-06-09 12:20 — style: ЕГРН parcels → blue outline + light-blue fill; gov → pink; remove temp green filter highlight
+- 2026-06-09 10:27 — egrn filter: move to topright control near layers; green highlight for ЕГРН parcels; rename OSM→Схема
+- 2026-06-09 10:18 — popup: 'кадастровый номер РФ' → 'кадастровый РФ'
+- 2026-06-09 10:17 — fix: ЕГРН filter was hidden by minimal-UI CSS rule — exclude it via :has
+- 2026-06-09 10:13 — popup: add copy buttons next to UA cadnum and РФ cadnum
+- 2026-06-09 10:10 — owner: 12:001:0404 Киров → Чернышук Андрей
+- 2026-06-09 10:07 — feature: ЕГРН filter (Все / Только с ЕГРН / Без ЕГРН) in left panel
+- 2026-06-09 10:01 — 0399: add РФ cadnum 96:01:0005445:275 + ЕГРН
+- 2026-06-09 09:58 — owner: 'Яков Кацович и компаньоны (...)' → 'Яков Кацович и ко.' (all)
+- 2026-06-09 09:50 — popup: remove статус row (р/с/с+); keep raw st in data
+- 2026-06-09 09:47 — popup: add 'кадастровый номер РФ' and 'оформлен ЕГРН' rows (shown when filled)
+- 2026-06-09 09:32 — owner: 12:001:0402 Киров → Чернышук Андрей
+- 2026-06-09 09:31 — owner: set 0054/0055/0056 → Скрипник В.В.
+- 2026-06-09 09:21 — data: merge April-2026 Excel info; restore 45 parcels with owner data
+- 2026-06-09 08:57 — Revert "parcels: shift all 477 features +5m NNE (right)"
+- 2026-06-09 08:53 — parcels: shift all 477 features +5m NNE (right)
+- 2026-06-09 08:51 — parcels: shift all 477 features 5m NNE (right at bearing 60)
+- 2026-06-09 08:48 — parcels: convert last MultiPolygon→Polygon; hover bringToFront so full outline highlights
+- 2026-06-09 08:45 — parcels: restore original coordinates from source (undo all shifts)
+- 2026-06-09 08:38 — parcels: shift all 477 features 100m NNE (right at bearing 60)
+- 2026-06-09 02:05 — parcels: shift all 477 features 80m SSW (left at bearing 60)
+- 2026-06-09 01:58 — parcel 11:003:0267: remove 7 inner-ring artifacts, keep solid outline
+- 2026-06-09 01:53 — parcels: shift all 477 features 80m SSW (left at bearing 60)
+- 2026-06-09 01:52 — remove 25 more artifacts (<100m²) → 477 parcels
+- 2026-06-09 01:51 — parcels: shift all 502 features 40m NNE (right at bearing 60)
+- 2026-06-09 01:48 — ui: narrow left panel by 1cm (280→242px, media 220→182px)
+- 2026-06-09 01:46 — parcels: shift all 502 features 40m NNE (right at bearing 60)
+- 2026-06-09 01:45 — remove 29 tiny artifacts (<50m²); move recent-viewed block to bottom of left panel
+- 2026-06-09 01:41 — ui: recent-viewed panel (last 5, localStorage) + zoom 16.3 → 16.2 (-5%)
+- 2026-06-09 01:38 — ui: remove '/компания' from search label; decline 'участок' by count
+- 2026-06-09 01:36 — header: stats inline (number + label same line) + size +20%
+- 2026-06-09 01:34 — parcels: shift all 531 features 20m SSW (screen-left at bearing 60)
+- 2026-06-09 01:32 — map: zoom 16.2 → 16.3 (+10%)
+- 2026-06-09 01:30 — parcels: shift all 531 features 10m NNE (screen-right at bearing 60)
+- 2026-06-09 01:28 — map: zoom 16.1 → 16.2 (+10%)
+- 2026-06-09 01:27 — search: remove placeholder example
+- 2026-06-09 01:25 — header: stats text +15% (values 12→14px, labels 10→12px)
+- 2026-06-09 01:24 — popup: text -20% (area 17→14px, ownership 15→12px)
+- 2026-06-09 01:23 — style: Державна власність → light pink (#ffc4d6); blue override for :11:003:0002 kept
+- 2026-06-09 01:21 — parcels: shift all 531 features 5m SSW (screen-left at bearing 60)
+- 2026-06-09 01:16 — map: shift 100m NW (pan up) + fillOpacity 0.35 → 0.18 (very transparent fill)
+- 2026-06-09 01:14 — parcels: bright thick yellow borders + transparent fill (map visible through)
+- 2026-06-09 01:11 — map: shift another 120m SSW to (46.2261, 35.2394)
+- 2026-06-09 01:08 — map: shift SSW 150m to (46.2270, 35.2402)
+- 2026-06-09 01:03 — map: zoom 15.8 → 16.1 (+20%) + shift SSW 100m
+- 2026-06-09 01:01 — map: zoom 15.7 → 15.8 (+10%)
+- 2026-06-09 00:59 — map: shift back 200m SSW (left) to (46.2290, 35.2418)
+- 2026-06-09 00:54 — map: shift NNE 200m + zoom 15.6 → 15.7 (+10%)
+- 2026-06-09 00:53 — map: zoom 15.5 → 15.6 (+10%) + zoomSnap 0.1 for fine control
+- 2026-06-09 00:50 — map: zoom 17 → 15.5 (-1.5) + enable fractional zoomSnap 0.5
+- 2026-06-09 00:47 — map: zoom 16 → 17 (2x closer) + back-step ~75m NNE
+- 2026-06-09 00:46 — map: step back ~75m NNE (~5cm)
+- 2026-06-09 00:45 — map: pan another ~225m SSW (~15cm)
+- 2026-06-09 00:43 — map: pan another 30m SSW
+- 2026-06-09 00:41 — map: pan another ~75m SSW
+- 2026-06-09 00:39 — map: pan opposite direction (SSW) — center to (46.231, 35.2435)
+- 2026-06-09 00:34 — map: shift center another ~75m NNE (right by ~5cm)
+- 2026-06-09 00:32 — map: shift center NNE ~150m (pan view right by ~10cm at typical screen)
+- 2026-06-09 00:28 — map: default zoom 14 → 16 (~4x closer)
+- 2026-06-09 00:26 — map: bearing 60 (peninsula horizontal at this zoom/center) + explicit setBearing fallback
+- 2026-06-09 00:12 — map: default view zoom 14 at (46.232, 35.245) — matches user's preferred framing
+- 2026-06-08 23:47 — polygons: solid fill + layer-wide CSS opacity → uniform shade across overlaps
+- 2026-06-08 23:45 — popup: area 11→17px (bold), ownership 10→15px
+- 2026-06-08 23:41 — popup: keep only area in subtitle; translate ownership to RU; remove basket button
+- 2026-06-08 23:37 — remove giant national park parcel 12:001:0452; reduce fillOpacity to 0.22
+- 2026-06-08 23:34 — style: only 11:003:0002 light blue, all others light salad green
+- 2026-06-08 23:31 — ui: hide yellow council marker circle
+- 2026-06-08 23:30 — marker: remove count number; header: show real participation/area totals
+- 2026-06-08 23:27 — style: all parcels green except Державна власність (blue)
+- 2026-06-08 23:21 — fix: STATS/FILTERS fallbacks — autoload was blocked by undefined STATS in renderSidebar
+- 2026-06-08 23:15 — polygons: always visible — thicker accent border, toggle disabled
+- 2026-06-08 23:10 — add 137 parcels from квартал 11:003 (total 532, 9796 га)
+- 2026-06-08 23:07 — map: recenter on Бирючий 12:001 polygons centroid (46.2513, 35.2517)
+- 2026-06-08 23:03 — manifest: add Бирючий 12:001 (395 parcels, 9734.8 га) + auto-load on start
+- 2026-06-08 23:02 — import 395 parcels of квартал 12:001 (Бирючий) from source
+- 2026-06-08 22:50 — header: hide 'сельсоветов' stat
+- 2026-06-08 22:49 — map: bearing 95° (compensate spit tilt) + shift up to expose sea below
+- 2026-06-08 22:36 — ui: minimal sidebar — title 'Бухта' + only cadastr search
+- 2026-06-08 22:34 — map: add leaflet-rotate plugin, bearing 90° (peninsula horizontal)
+- 2026-06-08 22:30 — ui: remove right sidebar — map fills full width
+- 2026-06-08 22:26 — map: recenter to Бирючий микрорайон (46.235, 35.246)
+- 2026-06-08 22:17 — map: recenter to Бирючий peninsula middle (46.175, 35.210)
+- 2026-06-08 22:14 — map: zoom 14 → 15 (2x closer)
+- 2026-06-08 22:12 — map: zoom 13 → 14 (2x closer)
+- 2026-06-08 22:09 — wipe all data — keep bare map
+- 2026-06-08 22:04 — map: start zoomed to Бирючий + auto-load Кирилівка parcels
+- 2026-06-08 21:53 — import 495 parcels from 008 KML (Бирючий / Кирилівка + Генічеськ)
+- 2026-05-16 20:37 — detail panel: cadnum click navigates to parcel on map (not kadastr.live)
