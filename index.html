@@ -206,8 +206,8 @@
     aside.left, aside.right { width: 182px; }
   }
 
-  /* Минимальный UI — оставлен только поиск по кадастру */
-  .filter-group:not(:first-of-type),
+  /* Минимальный UI — оставлен только поиск по кадастру (но фильтр ЕГРН показываем) */
+  .filter-group:not(:first-of-type):not(:has(#egrn-filter)),
   #btn-export-all,
   #btn-toggle-polys,
   #btn-reset,
