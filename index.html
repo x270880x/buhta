@@ -209,7 +209,7 @@
   }
 
   /* Телефоны: карта на весь экран, панели выезжают по кнопкам */
-  #panel-toggle, #controls-toggle { display: none; }
+  #panel-toggle, #controls-toggle, #mobile-backdrop { display: none; }
   @media (max-width: 600px) {
     header { padding: 5px 12px; }
     header h1 { font-size: 9px; line-height: 1.18; }
@@ -225,6 +225,19 @@
     }
     #panel-toggle { left: 8px; }
     #controls-toggle { right: 8px; }
+    /* при открытой панели — прячем её кнопку */
+    body.panel-open #panel-toggle { display: none; }
+    body.controls-open #controls-toggle { display: none; }
+
+    /* затемнение-оверлей: тап по нему сворачивает панели */
+    #mobile-backdrop {
+      display: none; position: absolute; inset: 0; z-index: 1080;
+      background: rgba(0,0,0,0.35);
+    }
+    body.panel-open #mobile-backdrop,
+    body.controls-open #mobile-backdrop { display: block; }
+    /* правые контролы поверх оверлея, когда раскрыты */
+    body.controls-open .leaflet-top.leaflet-right { z-index: 1085; }
 
     aside.left {
       position: absolute; top: 0; left: 0; bottom: 0; z-index: 1090;
@@ -292,8 +305,9 @@
 </header>
 
 <div class="layout">
-  <button id="panel-toggle" title="Меню" onclick="document.body.classList.toggle('panel-open')">☰</button>
-  <button id="controls-toggle" title="Слои и фильтр" onclick="document.body.classList.toggle('controls-open')">⚙</button>
+  <button id="panel-toggle" title="Меню" onclick="document.body.classList.add('panel-open')">☰</button>
+  <button id="controls-toggle" title="Слои и фильтр" onclick="document.body.classList.add('controls-open')">⚙</button>
+  <div id="mobile-backdrop" onclick="document.body.classList.remove('panel-open','controls-open')"></div>
   <aside class="left">
     <div class="filter-group">
       <label>Поиск (кадастр или ФИО)</label>
