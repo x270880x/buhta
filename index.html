@@ -208,8 +208,8 @@
     aside.left, aside.right { width: 182px; }
   }
 
-  /* Телефоны: карта на весь экран, левая панель выезжает по кнопке */
-  #panel-toggle { display: none; }
+  /* Телефоны: карта на весь экран, панели выезжают по кнопкам */
+  #panel-toggle, #controls-toggle { display: none; }
   @media (max-width: 600px) {
     header { padding: 8px 12px; }
     header h1 { font-size: 13px; line-height: 1.2; }
@@ -217,12 +217,15 @@
     header .right { gap: 10px; font-size: 12px; flex-wrap: wrap; justify-content: flex-end; }
     header .right .l { font-size: 9px; }
 
-    #panel-toggle {
-      display: block; position: absolute; top: 64px; left: 8px; z-index: 1100;
+    #panel-toggle, #controls-toggle {
+      display: block; position: absolute; top: 64px; z-index: 1100;
       width: 38px; height: 38px; border-radius: 8px; border: 1px solid var(--accent);
       background: var(--surface); color: var(--accent); font-size: 18px; cursor: pointer;
       box-shadow: 0 2px 8px rgba(0,0,0,0.5);
     }
+    #panel-toggle { left: 8px; }
+    #controls-toggle { right: 8px; }
+
     aside.left {
       position: absolute; top: 0; left: 0; bottom: 0; z-index: 1090;
       width: 80vw; max-width: 320px;
@@ -232,10 +235,16 @@
     body.panel-open aside.left { transform: translateX(0); }
     .layout { position: relative; }
     #map { width: 100%; }
-    /* контролы карты компактнее */
-    .leaflet-control-layers, .egrn-control { min-width: 132px; font-size: 12px; }
-    .egrn-btn { font-size: 11px; padding: 5px 7px; }
-    .leaflet-control-zoom a { width: 34px; height: 34px; line-height: 34px; font-size: 20px; }
+
+    /* zoom — ниже бургера, слева */
+    .leaflet-top.leaflet-left .leaflet-control-zoom { margin-top: 112px; margin-left: 8px; }
+    .leaflet-control-zoom a { width: 36px; height: 36px; line-height: 36px; font-size: 22px; }
+
+    /* правые контролы (схема + ЕГРН) скрыты, показываются по кнопке ⚙ */
+    .leaflet-control-layers, .egrn-control { display: none; min-width: 150px; font-size: 13px; }
+    body.controls-open .leaflet-control-layers,
+    body.controls-open .egrn-control { display: block; }
+    .egrn-btn { font-size: 12px; padding: 7px 9px; }
   }
 
   /* Минимальный UI — оставлен только поиск по кадастру (но фильтр ЕГРН показываем) */
@@ -284,6 +293,7 @@
 
 <div class="layout">
   <button id="panel-toggle" title="Меню" onclick="document.body.classList.toggle('panel-open')">☰</button>
+  <button id="controls-toggle" title="Слои и фильтр" onclick="document.body.classList.toggle('controls-open')">⚙</button>
   <aside class="left">
     <div class="filter-group">
       <label>Поиск (кадастр или ФИО)</label>
