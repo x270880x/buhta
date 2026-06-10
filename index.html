@@ -211,16 +211,16 @@
   /* Телефоны: карта на весь экран, панели выезжают по кнопкам */
   #panel-toggle, #controls-toggle { display: none; }
   @media (max-width: 600px) {
-    header { padding: 8px 12px; }
-    header h1 { font-size: 13px; line-height: 1.2; }
-    header .left .label { font-size: 8px; letter-spacing: 1px; }
-    header .right { gap: 10px; font-size: 12px; flex-wrap: wrap; justify-content: flex-end; }
-    header .right .l { font-size: 9px; }
+    header { padding: 5px 12px; }
+    header h1 { font-size: 9px; line-height: 1.18; }
+    header .left .label { font-size: 7px; letter-spacing: 1px; margin-bottom: 1px; }
+    header .right { gap: 8px; font-size: 11px; flex-wrap: wrap; justify-content: flex-end; }
+    header .right .l { font-size: 8px; }
 
     #panel-toggle, #controls-toggle {
-      display: block; position: absolute; top: 64px; z-index: 1100;
-      width: 38px; height: 38px; border-radius: 8px; border: 1px solid var(--accent);
-      background: var(--surface); color: var(--accent); font-size: 18px; cursor: pointer;
+      display: block; position: absolute; top: 46px; z-index: 1100;
+      width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--accent);
+      background: var(--surface); color: var(--accent); font-size: 17px; cursor: pointer;
       box-shadow: 0 2px 8px rgba(0,0,0,0.5);
     }
     #panel-toggle { left: 8px; }
@@ -237,7 +237,7 @@
     #map { width: 100%; }
 
     /* zoom — ниже бургера, слева */
-    .leaflet-top.leaflet-left .leaflet-control-zoom { margin-top: 112px; margin-left: 8px; }
+    .leaflet-top.leaflet-left .leaflet-control-zoom { margin-top: 90px; margin-left: 8px; }
     .leaflet-control-zoom a { width: 36px; height: 36px; line-height: 36px; font-size: 22px; }
 
     /* правые контролы (схема + ЕГРН) скрыты, показываются по кнопке ⚙ */
