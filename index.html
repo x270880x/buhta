@@ -43,6 +43,8 @@
     color: var(--accent); letter-spacing: 2px; text-transform: uppercase;
   }
   header h1 { font-size: 16px; font-weight: 700; color: #fff; line-height: 1.25; }
+  header h1 .h-sub { font-size: 0.72em; font-weight: 400; color: #b8bcc8; }
+  header h1 .h-main { font-size: 1.2em; }
   header .right { display: flex; gap: 24px; font-family: 'IBM Plex Mono', monospace; font-size: 17px; align-items: baseline; }
   header .right > div { display: flex; align-items: baseline; gap: 6px; }
   header .right .v { color: var(--accent); font-weight: 600; }
@@ -293,7 +295,7 @@
 <header>
   <div class="left">
     <div class="label">КАДАСТРОВАЯ КАРТА</div>
-    <h1>Херсонская обл<br>Генический р-н<br>с. Бухта</h1>
+    <h1><span class="h-sub">Херсонская обл</span><br><span class="h-sub">Генический р-н</span><br><span class="h-main">с. Бухта</span></h1>
   </div>
   <div class="right">
     <div><div class="v" id="hstat-parcels">0</div><div class="l">участков</div></div>
