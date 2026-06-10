@@ -1591,6 +1591,8 @@ let _resizeT;
 window.addEventListener('resize', () => { clearTimeout(_resizeT); _resizeT = setTimeout(() => map.invalidateSize(), 200); });
 
 // Стартовая позиция — остров Бирючий (Кирилівська ОТГ)
+// Сдвигаем вид на ~3см вверх (контент выше, открытого моря снизу больше)
+map.whenReady(() => map.panBy([0, 113], { animate: false }));
 // Автоподгрузка контуров совета на старте + применить фильтр после загрузки
 setTimeout(() => loadCouncilPolygons('2320355400').then(() => applyEgrnFilter()), 100);
 // Если хочешь видеть всю карту — раскомментируй ниже:
