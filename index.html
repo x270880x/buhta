@@ -1459,26 +1459,24 @@ search.addEventListener('input', e => {
     navigateToParcel(q);
     return;
   }
-  // Partial cadnum starting with digits: suggest opening council
-  if (/^\d{4,10}/.test(q)) {
-    const prefix = q.slice(0, 10);
-    const council = COUNCILS.find(c => c.code === prefix || c.code.startsWith(q));
-    const matches = COUNCILS.filter(c => c.code.startsWith(q.replace(/[:].*/,'')));
-    sr.innerHTML = matches.slice(0,20).map((c,i)=>`
-      <div class="item" data-i="${i}">
-        <div class="cad">${c.code}</div>
-        <div class="who">${escapeHtml(c.name)} · ${c.total} участков</div>
-      </div>
-    `).join('') || '<div class="item" style="color:var(--muted)">Сельсовет не найден</div>';
-    sr.style.display = 'block';
-    sr.querySelectorAll('.item').forEach((el,i) => {
-      el.addEventListener('click', () => {
-        const c = matches[i];
-        map.flyTo([c.lat, c.lon], 13, { duration: 0.6 });
-        showDetail(c.code);
-        sr.style.display = 'none';
-      });
-    });
+  // 4+ цифр (или фрагмент кадастра с ':') → искать участки по кадастру (укр / РФ / здания)
+  if (/^[\d:/]{4,}$/.test(q)) {
+    const qd = q.replace(/:/g, '');
+    const results = [];
+    for (const c of COUNCILS) {
+      if (!c.parcels) continue;
+      for (const p of c.parcels) {
+        const ua = p.c.replace(/:/g, '');
+        const rf = (p.cadrf || '').replace(/:/g, '');
+        const brf = (p.bcadrf || '').replace(/:/g, '');
+        if (ua.includes(qd) || rf.includes(qd) || brf.includes(qd)) {
+          results.push({ type: 'parcel', p, council: c });
+          if (results.length >= 50) break;
+        }
+      }
+      if (results.length >= 50) break;
+    }
+    renderSearchResults(results);
     return;
   }
   // Free text — search across loaded councils (partial coverage)
@@ -1508,8 +1506,12 @@ search.addEventListener('input', e => {
       if (results.length >= 50) break;
     }
   }
+  renderSearchResults(results);
+});
+
+function renderSearchResults(results) {
   if (!results.length) {
-    sr.innerHTML = '<div class="item" style="color:var(--muted)">Ничего не найдено. Для поиска по ФИО/арендатору сначала откройте нужный сельсовет.</div>';
+    sr.innerHTML = '<div class="item" style="color:var(--muted)">Ничего не найдено</div>';
     sr.style.display = 'block';
     return;
   }
@@ -1523,7 +1525,7 @@ search.addEventListener('input', e => {
       <div class="item" data-i="${i}">
         <div class="cad">${escapeHtml(r.p.c)}${r.p.fias ? ' 🚩' : ''}</div>
         <div class="who">${r.p.o? escapeHtml(r.p.o.slice(0,40)) : escapeHtml(r.council.name)}${r.p.zn? ' · '+escapeHtml(r.p.zn):''}</div>
-        ${r.p.fias ? `<div class="who" style="color:#e8c547">📍 с. Бухта, ${escapeHtml(r.p.fias)}${r.p.building?' · зд. '+escapeHtml(r.p.building):''}</div>` : ''}
+        ${r.p.fias ? `<div class="who" style="color:#e8c547">📍 с. Бухта, ${escapeHtml(r.p.fias)}${r.p.building?' · зд. '+escapeHtml(r.p.building):''}</div>` : ''}${r.p.cadrf ? `<div class="who" style="font-family:'IBM Plex Mono',monospace;color:#5bb8ff">🇷🇺 ${escapeHtml(r.p.cadrf)}</div>` : ''}
       </div>`;
   }).join('');
   sr.style.display = 'block';
@@ -1539,7 +1541,7 @@ search.addEventListener('input', e => {
       sr.style.display = 'none';
     });
   });
-});
+}
 document.addEventListener('click', e => {
   if (!e.target.closest('.filter-group')) sr.style.display = 'none';
 });
