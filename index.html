@@ -431,6 +431,7 @@ if (typeof map.setBearing === 'function') map.setBearing(60);
 
 // Polygon layers cache, keyed by council code
 const polygonLayers = {};        // code → L.geoJSON
+const rfCornerGroups = [];        // группы красных уголков (участки с адресом РФ)
 const parcelGeomIndex = {};      // cadnum → feature (for popups)
 let polygonsVisible = true;
 
@@ -580,6 +581,7 @@ async function loadCouncilPolygons(code) {
     layer.addTo(map);
     reorderByArea(layer, council); // большие вниз, мелкие наверх → вложенные кликабельны
     computeNested(layer); // предвычислить вложенность для подсветки при наведении
+    addRfCorners(layer, council); // красный уголок на участках с адресом РФ
     polygonLayers[code] = layer;
     if (!map._smallestClickBound) {
       map._smallestClickBound = true;
@@ -597,6 +599,27 @@ async function loadCouncilPolygons(code) {
     console.warn(`No polygons for ${code}:`, e);
     return null;
   }
+}
+
+// Красный уголок-маркер на участках с присвоенным адресом РФ
+const rfCornerIcon = L.divIcon({
+  html: '<div style="width:0;height:0;border-top:13px solid #e23b3b;border-right:13px solid transparent;filter:drop-shadow(0 0 1px rgba(0,0,0,.6))"></div>',
+  className: '', iconSize: [13, 13], iconAnchor: [0, 0]
+});
+function addRfCorners(layer, council) {
+  const grp = L.layerGroup().addTo(map);
+  rfCornerGroups.push(grp);
+  layer.eachLayer(l => {
+    const cad = l.feature.properties.cadnum;
+    const d = (council.parcels || []).find(p => p.c === cad);
+    if (!d || !d.fias) return;
+    const g = l.feature.geometry;
+    const ring = g.type === 'Polygon' ? g.coordinates[0] : g.coordinates[0][0];
+    // верхний-левый угол bbox участка
+    let top = ring[0];
+    for (const pt of ring) if (pt[1] > top[1] || (pt[1] === top[1] && pt[0] < top[0])) top = pt;
+    L.marker([top[1], top[0]], { icon: rfCornerIcon, interactive: false, keyboard: false }).addTo(grp);
+  });
 }
 
 function parcelStyle(f, council) {
