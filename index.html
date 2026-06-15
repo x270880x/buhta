@@ -602,9 +602,13 @@ async function loadCouncilPolygons(code) {
 }
 
 // Красный уголок-маркер на участках с присвоенным адресом РФ
+// Красный треугольный флажок (по центру участка с адресом РФ)
 const rfCornerIcon = L.divIcon({
-  html: '<div style="width:0;height:0;border-top:11px solid #e23b3b;border-right:11px solid transparent;filter:drop-shadow(0 0 1px rgba(0,0,0,.7))"></div>',
-  className: '', iconSize: [11, 11], iconAnchor: [0, 0]   // уголок вершиной в точке, свисает вправо-вниз
+  html: '<div style="position:relative;width:14px;height:16px">'
+      + '<div style="position:absolute;left:6px;top:0;width:1.5px;height:16px;background:#7a1010"></div>'
+      + '<div style="position:absolute;left:7px;top:1px;width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:9px solid #e23b3b;filter:drop-shadow(0 1px 1px rgba(0,0,0,.6))"></div>'
+      + '</div>',
+  className: '', iconSize: [14, 16], iconAnchor: [6, 16]   // основание флажка в точке
 });
 function addRfCorners(layer, council) {
   const grp = L.layerGroup().addTo(map);
@@ -616,18 +620,20 @@ function addRfCorners(layer, council) {
     const g = l.feature.geometry;
     const ring = g.type === 'Polygon' ? g.coordinates[0] : g.coordinates[0][0];
     const xs = ring.map(p => p[0]), ys = ring.map(p => p[1]);
-    const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
-    // ЛЕВЫЙ верхний угол участка: ближе к западному краю, в верхней части
-    const lx = minX + (maxX - minX) * 0.13;
-    let py = null;
-    for (let f = 0.10; f <= 0.6; f += 0.04) {
-      const ty = maxY - (maxY - minY) * f;
-      if (pointInRing(lx, ty, ring)) { py = ty; break; }
+    // центр участка (центроид вершин); если вне — сканируем от центра
+    let cx = xs.reduce((a, b) => a + b, 0) / xs.length;
+    let cy = ys.reduce((a, b) => a + b, 0) / ys.length;
+    if (!pointInRing(cx, cy, ring)) {
+      const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+      let found = false;
+      for (let fy = 0.5; fy <= 0.9 && !found; fy += 0.1)
+        for (let fx = 0.3; fx <= 0.7 && !found; fx += 0.1) {
+          const tx = minX + (maxX - minX) * fx, ty = minY + (maxY - minY) * fy;
+          if (pointInRing(tx, ty, ring)) { cx = tx; cy = ty; found = true; }
+        }
+      if (!found) return;
     }
-    if (py !== null) { L.marker([py, lx], { icon: rfCornerIcon, interactive: false, keyboard: false }).addTo(grp); return; }
-    // запасной — центроид
-    const c = [xs.reduce((a, b) => a + b, 0) / xs.length, ys.reduce((a, b) => a + b, 0) / ys.length];
-    if (pointInRing(c[0], c[1], ring)) L.marker([c[1], c[0]], { icon: rfCornerIcon, interactive: false, keyboard: false }).addTo(grp);
+    L.marker([cy, cx], { icon: rfCornerIcon, interactive: false, keyboard: false }).addTo(grp);
   });
 }
 
