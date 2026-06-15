@@ -1517,8 +1517,9 @@ search.addEventListener('input', e => {
       </div>`;
     return `
       <div class="item" data-i="${i}">
-        <div class="cad">${escapeHtml(r.p.c)}</div>
-        <div class="who">${escapeHtml(r.council.name)}${r.p.r? ' · аренд.: '+escapeHtml(r.p.r.slice(0,40)):''}${r.p.o? ' · '+escapeHtml(r.p.o.slice(0,40)):''}</div>
+        <div class="cad">${escapeHtml(r.p.c)}${r.p.fias ? ' <span style="color:#e23b3b">🔴</span>' : ''}</div>
+        <div class="who">${r.p.o? escapeHtml(r.p.o.slice(0,40)) : escapeHtml(r.council.name)}${r.p.zn? ' · '+escapeHtml(r.p.zn):''}</div>
+        ${r.p.fias ? `<div class="who" style="color:#e8c547">📍 с. Бухта, ${escapeHtml(r.p.fias)}${r.p.building?' · зд. '+escapeHtml(r.p.building):''}</div>` : ''}
       </div>`;
   }).join('');
   sr.style.display = 'block';
