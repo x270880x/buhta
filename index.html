@@ -1483,6 +1483,7 @@ search.addEventListener('input', e => {
   }
   // Free text — search across loaded councils (partial coverage)
   const ql = q.toLowerCase();
+  const tokens = ql.split(/[\s,]+/).filter(Boolean); // «набережная 76» → [набережная, 76]
   const results = [];
   for (const c of COUNCILS) {
     // Search council name
@@ -1493,12 +1494,12 @@ search.addEventListener('input', e => {
     // Search loaded parcels (those councils that user already opened)
     if (c.parcels) {
       for (const p of c.parcels) {
-        const hit = (p.o && p.o.toLowerCase().includes(ql))
-                 || (p.r && p.r.toLowerCase().includes(ql))
-                 || (p.ad && p.ad.toLowerCase().includes(ql))
-                 || (p.fias && p.fias.toLowerCase().includes(ql))
-                 || (p.zn && p.zn.toLowerCase().includes(ql))
-                 || (p.cadrf && p.cadrf.toLowerCase().includes(ql));
+        // Адресный/именной текст (без кадастров — чтобы число «76» не ловило кадастр :276)
+        const hay = [p.o, p.r, p.ad, p.fias, p.zn, p.building]
+          .filter(Boolean).join(' ').toLowerCase();
+        // кадастры матчим только длинными токенами (содержат ':' или длиннее 5 символов)
+        const cadHay = [p.cadrf, p.bcadrf, p.c].filter(Boolean).join(' ').toLowerCase();
+        const hit = tokens.every(t => hay.includes(t) || ((t.includes(':') || t.length > 5) && cadHay.includes(t)));
         if (hit) {
           results.push({ type: 'parcel', p, council: c });
           if (results.length >= 50) break;
