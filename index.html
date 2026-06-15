@@ -312,7 +312,7 @@
   <div id="mobile-backdrop" onclick="document.body.classList.remove('panel-open','controls-open')"></div>
   <aside class="left">
     <div class="filter-group">
-      <label>Поиск (кадастр или ФИО)</label>
+      <label>Поиск (кадастр, ФИО, адрес)</label>
       <input id="search" type="text" placeholder="" autocomplete="off"/>
       <div id="search-results"></div>
     </div>
@@ -603,8 +603,8 @@ async function loadCouncilPolygons(code) {
 
 // Красный уголок-маркер на участках с присвоенным адресом РФ
 const rfCornerIcon = L.divIcon({
-  html: '<div style="width:0;height:0;border-top:13px solid #e23b3b;border-right:13px solid transparent;filter:drop-shadow(0 0 1px rgba(0,0,0,.6))"></div>',
-  className: '', iconSize: [13, 13], iconAnchor: [0, 0]
+  html: '<div style="width:0;height:0;border-top:11px solid #e23b3b;border-right:11px solid transparent;filter:drop-shadow(0 0 1px rgba(0,0,0,.7))"></div>',
+  className: '', iconSize: [11, 11], iconAnchor: [0, 0]   // уголок вершиной в точке, свисает вправо-вниз
 });
 function addRfCorners(layer, council) {
   const grp = L.layerGroup().addTo(map);
@@ -615,10 +615,22 @@ function addRfCorners(layer, council) {
     if (!d || !d.fias) return;
     const g = l.feature.geometry;
     const ring = g.type === 'Polygon' ? g.coordinates[0] : g.coordinates[0][0];
-    // верхний-левый угол bbox участка
-    let top = ring[0];
-    for (const pt of ring) if (pt[1] > top[1] || (pt[1] === top[1] && pt[0] < top[0])) top = pt;
-    L.marker([top[1], top[0]], { icon: rfCornerIcon, interactive: false, keyboard: false }).addTo(grp);
+    const xs = ring.map(p => p[0]), ys = ring.map(p => p[1]);
+    const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+    const cx = (minX + maxX) / 2;
+    // ищу точку внутри участка как можно выше: сканирую от верха к центру
+    let py = null;
+    for (let f = 0.08; f <= 0.55; f += 0.04) {
+      const ty = maxY - (maxY - minY) * f;
+      if (pointInRing(cx, ty, ring)) { py = ty; break; }
+    }
+    if (py === null) {
+      // центроид по вершинам (надёжный внутренний)
+      const c = [xs.reduce((a, b) => a + b, 0) / xs.length, ys.reduce((a, b) => a + b, 0) / ys.length];
+      if (pointInRing(c[0], c[1], ring)) { L.marker([c[1], c[0]], { icon: rfCornerIcon, interactive: false, keyboard: false }).addTo(grp); }
+      return;
+    }
+    L.marker([py, cx], { icon: rfCornerIcon, interactive: false, keyboard: false }).addTo(grp);
   });
 }
 
@@ -736,6 +748,7 @@ egrnControl.onAdd = function () {
       <button class="egrn-btn active" data-mode="all">Все участки</button>
       <button class="egrn-btn" data-mode="egrn">✓ Только с ЕГРН</button>
       <button class="egrn-btn" data-mode="other">Без ЕГРН</button>
+      <button class="egrn-btn" data-mode="addr">🔴 С адресом РФ</button>
     </div>`;
   L.DomEvent.disableClickPropagation(div);
   return div;
@@ -1479,7 +1492,10 @@ search.addEventListener('input', e => {
       for (const p of c.parcels) {
         const hit = (p.o && p.o.toLowerCase().includes(ql))
                  || (p.r && p.r.toLowerCase().includes(ql))
-                 || (p.ad && p.ad.toLowerCase().includes(ql));
+                 || (p.ad && p.ad.toLowerCase().includes(ql))
+                 || (p.fias && p.fias.toLowerCase().includes(ql))
+                 || (p.zn && p.zn.toLowerCase().includes(ql))
+                 || (p.cadrf && p.cadrf.toLowerCase().includes(ql));
         if (hit) {
           results.push({ type: 'parcel', p, council: c });
           if (results.length >= 50) break;
@@ -1579,21 +1595,25 @@ function applyEgrnFilter() {
   const c = COUNCILS.find(x => x.code === '2320355400');
   const parcels = c?.parcels || [];
   const egrnSet = new Set(parcels.filter(p => p.egrn).map(p => p.c));
+  const addrSet = new Set(parcels.filter(p => p.fias).map(p => p.c));
   Object.values(polygonLayers).forEach(layer => {
     layer.eachLayer(l => {
       const cad = l.feature.properties.cadnum;
-      const has = egrnSet.has(cad);
       let visible = true;
-      if (egrnMode === 'egrn') visible = has;
-      else if (egrnMode === 'other') visible = !has;
+      if (egrnMode === 'egrn') visible = egrnSet.has(cad);
+      else if (egrnMode === 'other') visible = !egrnSet.has(cad);
+      else if (egrnMode === 'addr') visible = addrSet.has(cad);
       const el = l.getElement && l.getElement();
       if (el) el.style.display = visible ? '' : 'none';
     });
   });
+  // красные уголки видны только когда участки видны (режим all или addr)
+  rfCornerGroups.forEach(g => { if (egrnMode === 'other') map.removeLayer(g); else if (!map.hasLayer(g)) g.addTo(map); });
   // Пересчёт шапки под выбранный фильтр
   let shown = parcels;
   if (egrnMode === 'egrn') shown = parcels.filter(p => p.egrn);
   else if (egrnMode === 'other') shown = parcels.filter(p => !p.egrn);
+  else if (egrnMode === 'addr') shown = parcels.filter(p => p.fias);
   const cnt = shown.length;
   const area = Math.round(shown.reduce((s, p) => s + (p.a || 0), 0) * 10) / 10;
   document.getElementById('hstat-parcels').textContent = fmt(cnt);
