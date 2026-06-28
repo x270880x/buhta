@@ -418,7 +418,7 @@ const RENTER_COUNCILS = DATA.renter_councils || {};
 // Init map
 const map = L.map('map', {
   zoomControl: true,
-  attributionControl: true,
+  attributionControl: false,
   rotate: true,
   bearing: 60,
   rotateControl: { closeOnZeroBearing: false },
@@ -757,6 +757,23 @@ egrnControl.onAdd = function () {
   return div;
 };
 egrnControl.addTo(map);
+
+// Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
+const BUILD_VERSION = '2026-06-15.1';
+const techInfo = L.control({ position: 'bottomright' });
+techInfo.onAdd = function () {
+  const d = L.DomUtil.create('div', 'techinfo');
+  d.id = 'techinfo';
+  d.style.cssText = 'font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--muted);background:rgba(15,17,23,.7);padding:2px 7px;border-radius:4px;border:1px solid var(--border)';
+  return d;
+};
+techInfo.addTo(map);
+function updateTechInfo() {
+  const el = document.getElementById('techinfo');
+  if (el) el.innerHTML = `v${BUILD_VERSION} · zoom ${map.getZoom().toFixed(1)}`;
+}
+map.on('zoomend', updateTechInfo);
+map.whenReady(updateTechInfo);
 
 let markers = {};
 let activeCode = null;
