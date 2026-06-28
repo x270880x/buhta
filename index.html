@@ -770,7 +770,7 @@ techInfo.onAdd = function () {
 techInfo.addTo(map);
 function updateTechInfo() {
   const el = document.getElementById('techinfo');
-  if (el) el.innerHTML = `v${BUILD_VERSION} · zoom ${map.getZoom().toFixed(1)}`;
+  if (el) el.innerHTML = `${BUILD_VERSION} · ${map.getZoom().toFixed(1)}`;
 }
 map.on('zoomend', updateTechInfo);
 map.whenReady(updateTechInfo);
