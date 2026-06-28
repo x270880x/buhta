@@ -554,20 +554,13 @@ async function loadCouncilPolygons(code) {
         l.on('mouseover', () => {
           l.bringToFront(); // поднять наверх — иначе соседи перекрывают часть обводки
           if (!basket.has(cad)) l.setStyle({ weight: 3, color: '#fff' });
-          // Если это контейнер — поднять вложенные наверх и обвести их (видны + кликабельны)
+          // Если это контейнер — только поднять вложенные наверх (кликабельны), БЕЗ перекраски
           const nested = nestedMap[cad];
-          if (nested) nested.forEach(nl => {
-            nl.bringToFront();
-            if (!basket.has(nl.feature.properties.cadnum)) nl.setStyle({ weight: 2, color: '#fff' });
-          });
+          if (nested) nested.forEach(nl => nl.bringToFront());
         });
         l.on('mouseout', () => {
           if (basket.has(cad)) l.setStyle({ color:'#ff0', weight:3, fillOpacity:0.7 });
           else layer.resetStyle(l);
-          const nested = nestedMap[cad];
-          if (nested) nested.forEach(nl => {
-            if (!basket.has(nl.feature.properties.cadnum)) layer.resetStyle(nl);
-          });
           reorderByArea(layer, council); // вернуть z-порядок: вложенные снова сверху
         });
         // Shift+click — добавить/убрать из корзины
@@ -762,7 +755,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '1.0';
+const BUILD_VERSION = '1.1';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
