@@ -255,6 +255,10 @@
     .leaflet-top.leaflet-left .leaflet-control-zoom { margin-top: 60px; margin-left: 8px; }
     .leaflet-control-zoom a { width: 36px; height: 36px; line-height: 36px; font-size: 22px; }
 
+    /* попап — уже, с отступами, не перекрывает кнопки */
+    .leaflet-popup-content { font-size: 12px; margin: 10px 12px; }
+    .leaflet-popup-content-wrapper { max-width: 88vw; }
+
     /* правые контролы (схема + ЕГРН) скрыты, показываются по кнопке ⚙ */
     .leaflet-control-layers, .egrn-control { display: none; min-width: 150px; font-size: 13px; }
     body.controls-open .leaflet-control-layers,
@@ -755,7 +759,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '1.1';
+const BUILD_VERSION = '1.2';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
