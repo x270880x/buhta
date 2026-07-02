@@ -763,7 +763,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '3.2';
+const BUILD_VERSION = '3.3';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1732,7 +1732,9 @@ function fitStartView() {
   Object.values(parcelGeomIndex).forEach(f => pts(f).forEach(seeY));
   pa.concat(pb).forEach(p => { if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y; });
   const size = map.getSize(), w = size.x, h = size.y;
-  const SIDE = 19, SEA = 188; // ~1 см суммарно по бокам; ~5 см моря снизу (3+2 по просьбе)
+  // Пропорции утверждены на десктопе (1198×795: зум 16.6, море 188px) — на других
+  // экранах те же доли, чтобы вид масштабировался под любой размер
+  const SIDE = Math.round(w * 0.016), SEA = Math.round(h * 0.236);
   const dz = Math.log2((w - 2 * SIDE) / (maxX - minX));
   // +0.2 к вписыванию по ширине — пользователь утвердил старт 16.6 (было 16.4)
   const zStart = Math.max(map.getMinZoom(), Math.floor((map.getZoom() + dz) * 10) / 10 + 0.2);
