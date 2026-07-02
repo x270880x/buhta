@@ -411,7 +411,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet-rotate@0.2.8/dist/leaflet-rotate.min.js"></script>
-<script id="data" type="application/json">{"councils": [{"code": "2320355400", "name": "смт Кирилівка (Бирючий 12:001 + 11:003)", "lat": 46.2487, "lon": 35.2517, "region": "Запоріжжя", "total": 524, "area": 120.7, "by_ownership": {}, "top_owners": [], "top_renters": [], "top_categories": [], "lease_years": {}}]}</script>
+<script id="data" type="application/json">{"councils": [{"code": "2320355400", "name": "с. Бухта", "lat": 46.2487, "lon": 35.2517, "region": "Херсонская область", "total": 524, "area": 120.7, "by_ownership": {}, "top_owners": [], "top_renters": [], "top_categories": [], "lease_years": {}}]}</script>
 <script>
 const DATA = JSON.parse(document.getElementById('data').textContent);
 const COUNCILS = DATA.councils;
@@ -759,7 +759,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '1.5';
+const BUILD_VERSION = '1.6';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1660,7 +1660,7 @@ document.querySelectorAll('.egrn-btn').forEach(btn => {
 let _resizeT;
 window.addEventListener('resize', () => { clearTimeout(_resizeT); _resizeT = setTimeout(() => map.invalidateSize(), 200); });
 
-// Стартовая позиция — остров Бирючий (Кирилівська ОТГ)
+// Стартовая позиция — с. Бухта (Генический р-н, Херсонская обл)
 // Автоподгрузка контуров совета на старте + применить фильтр после загрузки
 setTimeout(() => loadCouncilPolygons('2320355400').then(() => applyEgrnFilter()), 100);
 // Если хочешь видеть всю карту — раскомментируй ниже:
