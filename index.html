@@ -763,7 +763,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '3.3';
+const BUILD_VERSION = '3.4';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1734,7 +1734,7 @@ function fitStartView() {
   const size = map.getSize(), w = size.x, h = size.y;
   // Пропорции утверждены на десктопе (1198×795: зум 16.6, море 188px) — на других
   // экранах те же доли, чтобы вид масштабировался под любой размер
-  const SIDE = Math.round(w * 0.016), SEA = Math.round(h * 0.236);
+  const SIDE = Math.round(w * 0.016), SEA = Math.round(h * 0.142); // море ~3 см (вернули 2 см назад)
   const dz = Math.log2((w - 2 * SIDE) / (maxX - minX));
   // +0.2 к вписыванию по ширине — пользователь утвердил старт 16.6 (было 16.4)
   const zStart = Math.max(map.getMinZoom(), Math.floor((map.getZoom() + dz) * 10) / 10 + 0.2);
