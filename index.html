@@ -763,7 +763,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '3.0';
+const BUILD_VERSION = '3.1';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1732,7 +1732,7 @@ function fitStartView() {
   Object.values(parcelGeomIndex).forEach(f => pts(f).forEach(seeY));
   pa.concat(pb).forEach(p => { if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y; });
   const size = map.getSize(), w = size.x, h = size.y;
-  const SIDE = 19, SEA = 38; // ~1 см суммарно по бокам; ~1 см моря снизу
+  const SIDE = 19, SEA = 113; // ~1 см суммарно по бокам; ~3 см моря снизу
   const dz = Math.log2(Math.min((w - 2 * SIDE) / (maxX - minX), (h - SEA - SIDE) / (maxY - minY)));
   const zStart = Math.max(map.getMinZoom(), Math.floor((map.getZoom() + dz) * 10) / 10);
   const k = Math.pow(2, zStart - map.getZoom());
