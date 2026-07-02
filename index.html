@@ -763,7 +763,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '3.1';
+const BUILD_VERSION = '3.2';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1732,9 +1732,10 @@ function fitStartView() {
   Object.values(parcelGeomIndex).forEach(f => pts(f).forEach(seeY));
   pa.concat(pb).forEach(p => { if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y; });
   const size = map.getSize(), w = size.x, h = size.y;
-  const SIDE = 19, SEA = 113; // ~1 см суммарно по бокам; ~3 см моря снизу
-  const dz = Math.log2(Math.min((w - 2 * SIDE) / (maxX - minX), (h - SEA - SIDE) / (maxY - minY)));
-  const zStart = Math.max(map.getMinZoom(), Math.floor((map.getZoom() + dz) * 10) / 10);
+  const SIDE = 19, SEA = 188; // ~1 см суммарно по бокам; ~5 см моря снизу (3+2 по просьбе)
+  const dz = Math.log2((w - 2 * SIDE) / (maxX - minX));
+  // +0.2 к вписыванию по ширине — пользователь утвердил старт 16.6 (было 16.4)
+  const zStart = Math.max(map.getMinZoom(), Math.floor((map.getZoom() + dz) * 10) / 10 + 0.2);
   const k = Math.pow(2, zStart - map.getZoom());
   const cx = (minX + maxX) / 2;                 // полоса по центру по горизонтали
   const cy = maxY - (h / 2 - SEA) / k;          // нижний край участков → на h-SEA (1 см моря)
