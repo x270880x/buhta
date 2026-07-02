@@ -511,6 +511,7 @@ function findSmallestParcelAt(ll) {
 
 // Карта вложенности: cad контейнера → [layer вложенных участков]
 const nestedMap = {};
+let HOVERED = null; // текущий подсвеченный слой — подсвечен всегда максимум один
 function computeNested(layer) {
   const items = [];
   layer.eachLayer(l => {
@@ -556,17 +557,24 @@ async function loadCouncilPolygons(code) {
         parcelGeomIndex[cad] = f;
         const data = (council.parcels || []).find(p => p.c === cad);
         l.bindPopup(buildParcelPopup(cad, data, council));
+        const unhover = lyr => {
+          const c2 = lyr.feature.properties.cadnum;
+          if (basket.has(c2)) lyr.setStyle({ color:'#ff0', weight:3, fillOpacity:0.7 });
+          else layer.resetStyle(lyr);
+        };
         l.on('mouseover', () => {
-          l.bringToFront(); // поднять наверх — иначе соседи перекрывают часть обводки
-          if (!basket.has(cad)) l.setStyle({ weight: 3, color: '#fff' });
-          // Если это контейнер — только поднять вложенные наверх (кликабельны), БЕЗ перекраски
+          // страховка: подсвечен максимум один участок (лишние mouseover не залипают)
+          if (HOVERED && HOVERED !== l) unhover(HOVERED);
+          HOVERED = l;
           const nested = nestedMap[cad];
-          if (nested) nested.forEach(nl => nl.bringToFront());
+          // Контейнер НЕ поднимаем наверх (вложенные остаются кликабельными и порядок
+          // слоёв не перетасовывается под курсором — иначе браузер шлёт ложные mouseover)
+          if (!nested) l.bringToFront(); // мелкий — поднять, чтобы обводка была видна целиком
+          if (!basket.has(cad)) l.setStyle({ weight: 3, color: '#fff' });
         });
         l.on('mouseout', () => {
-          if (basket.has(cad)) l.setStyle({ color:'#ff0', weight:3, fillOpacity:0.7 });
-          else layer.resetStyle(l);
-          reorderByArea(layer, council); // вернуть z-порядок: вложенные снова сверху
+          if (HOVERED === l) HOVERED = null;
+          unhover(l);
         });
         // Shift+click — добавить/убрать из корзины
         l.on('click', e => {
@@ -763,7 +771,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '3.7';
+const BUILD_VERSION = '3.9';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1458,7 +1466,8 @@ async function navigateToParcel(cadnum) {
   if (target) {
     // Zoom to parcel + open popup
     const b = target.getBounds();
-    map.fitBounds(b, { padding: [60, 60], maxZoom: 18 });
+    // animate:false обязательно: анимированный fitBounds с leaflet-rotate молча не срабатывает
+    map.fitBounds(b, { padding: [60, 60], maxZoom: 18, animate: false });
     setTimeout(() => target.openPopup(), 600);
     // Briefly highlight
     target.setStyle({ weight: 3, color: '#ff0' });
@@ -1687,6 +1696,9 @@ function computeLimits() {
   // зум, при котором полоса + pad px с каждой стороны влезает в экран (вниз до шага 0.1)
   const fitZoom = pad => Math.floor((map.getZoom() + Math.log2(Math.min((w - 2 * pad) / (maxX - minX), (h - 2 * pad) / (maxY - minY)))) * 10) / 10;
   const zMin = fitZoom(Math.round(3 * PX_CM));   // зум-аут: полоса + 3 см с каждой стороны
+  // Защита: при нулевом/крошечном контейнере (фоновая вкладка) выйдет NaN —
+  // ни в коем случае не скармливать его карте, иначе она «отравится» и умрёт
+  if (!isFinite(zMin)) return false;
   const cc = { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
   map.setMinZoom(zMin);
   // Рамка = то, что видно при максимальном зум-ауте (в экранных координатах,
@@ -1699,7 +1711,7 @@ function computeLimits() {
   return true;
 }
 function clampView() {
-  if (!CLAMP || map._clamping) return;
+  if (!CLAMP || map._clamping || map._animatingZoom) return; // во время анимации зума не дёргаем
   const size = map.getSize(), w = size.x, h = size.y;
   const tl = map.latLngToContainerPoint(CLAMP.tl);
   const br = map.latLngToContainerPoint(CLAMP.br);
@@ -1717,7 +1729,11 @@ function clampView() {
   }
 }
 function fitStartView() {
-  if (!computeLimits()) return; // жёсткая рамка + minZoom: полоса 0002→0059 + 3 см (не трогаем)
+  // Контейнер может быть ещё без размера (фоновая вкладка) — ждём, иначе вся математика = NaN
+  map.invalidateSize({ animate: false });
+  const sz = map.getSize();
+  if (!sz.x || !sz.y) { setTimeout(fitStartView, 250); return; }
+  if (!computeLimits()) { setTimeout(fitStartView, 250); return; } // жёсткая рамка + minZoom: полоса 0002→0059 + 3 см
   // Первый показ: зум 16.6, полоса 0002→0069 по центру, снизу ~3 см моря
   const A = parcelGeomIndex['2320355400:11:003:0002'];
   const B = parcelGeomIndex['2320355400:11:003:0069'];
