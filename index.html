@@ -760,7 +760,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '2.2';
+const BUILD_VERSION = '2.3';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1662,8 +1662,30 @@ let _resizeT;
 window.addEventListener('resize', () => { clearTimeout(_resizeT); _resizeT = setTimeout(() => map.invalidateSize(), 200); });
 
 // Стартовая позиция — с. Бухта (Генический р-н, Херсонская обл)
+// Вписать вид: от левого края 11:003:0002 до правого края 11:003:0069 (+ ~1 см),
+// максимальный зум на всё между ними, адаптивно под размер экрана (учитывает bearing 60°)
+function fitStartView() {
+  const A = parcelGeomIndex['2320355400:11:003:0002'];
+  const B = parcelGeomIndex['2320355400:11:003:0069'];
+  if (!A || !B) return;
+  const pts = f => { const out = []; (function walk(c) { if (typeof c[0] === 'number') out.push(map.latLngToContainerPoint([c[1], c[0]])); else c.forEach(walk); })(f.geometry.coordinates); return out; };
+  const pa = pts(A), pb = pts(B);
+  const minX = Math.min(...pa.map(p => p.x));   // левый край левого участка (экранный)
+  const maxX = Math.max(...pb.map(p => p.x));   // правый край правого участка
+  let minY = Infinity, maxY = -Infinity;
+  const seeY = p => { if (p.x >= minX && p.x <= maxX) { if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y; } };
+  Object.values(parcelGeomIndex).forEach(f => pts(f).forEach(seeY));
+  pa.concat(pb).forEach(p => { if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y; });
+  const PAD = 19; // ~0.5 см с каждой стороны ≈ 1 см суммарно
+  const size = map.getSize();
+  const dz = Math.log2(Math.min((size.x - 2 * PAD) / (maxX - minX), (size.y - 2 * PAD) / (maxY - minY)));
+  const z = Math.floor((map.getZoom() + dz) * 10) / 10; // вниз до шага zoomSnap, чтобы ничего не обрезать
+  if (z < map.getMinZoom()) map.setMinZoom(z); // на узких экранах разрешаем зум ниже 15
+  const center = map.containerPointToLatLng([(minX + maxX) / 2, (minY + maxY) / 2]);
+  map.setView(center, z, { animate: false });
+}
 // Автоподгрузка контуров совета на старте + применить фильтр после загрузки
-setTimeout(() => loadCouncilPolygons('2320355400').then(() => applyEgrnFilter()), 100);
+setTimeout(() => loadCouncilPolygons('2320355400').then(() => { applyEgrnFilter(); fitStartView(); }), 100);
 // Если хочешь видеть всю карту — раскомментируй ниже:
 // const bounds = L.latLngBounds(COUNCILS.filter(c=>c.lat).map(c=>[c.lat,c.lon]));
 // map.fitBounds(bounds, { padding: [40, 40] });
