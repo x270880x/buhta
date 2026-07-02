@@ -763,7 +763,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '3.4';
+const BUILD_VERSION = '3.5';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1718,8 +1718,7 @@ function clampView() {
 }
 function fitStartView() {
   if (!computeLimits()) return; // жёсткая рамка + minZoom: полоса 0002→0059 + 3 см (не трогаем)
-  // Первый показ: от левого края 11:003:0002 до правого края 11:003:0069 (+ ~1 см),
-  // максимальный зум на всё между ними, снизу ~1 см моря под нижним краем участков
+  // Первый показ: зум 16.6, полоса 0002→0069 по центру, снизу ~3 см моря
   const A = parcelGeomIndex['2320355400:11:003:0002'];
   const B = parcelGeomIndex['2320355400:11:003:0069'];
   if (!A || !B) return;
@@ -1732,12 +1731,9 @@ function fitStartView() {
   Object.values(parcelGeomIndex).forEach(f => pts(f).forEach(seeY));
   pa.concat(pb).forEach(p => { if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y; });
   const size = map.getSize(), w = size.x, h = size.y;
-  // Пропорции утверждены на десктопе (1198×795: зум 16.6, море 188px) — на других
-  // экранах те же доли, чтобы вид масштабировался под любой размер
-  const SIDE = Math.round(w * 0.016), SEA = Math.round(h * 0.142); // море ~3 см (вернули 2 см назад)
-  const dz = Math.log2((w - 2 * SIDE) / (maxX - minX));
-  // +0.2 к вписыванию по ширине — пользователь утвердил старт 16.6 (было 16.4)
-  const zStart = Math.max(map.getMinZoom(), Math.floor((map.getZoom() + dz) * 10) / 10 + 0.2);
+  const SEA = Math.round(h * 0.142); // море снизу ~3 см (доля высоты экрана — одинаково на всех мониторах)
+  // Стартовый зум — ровно 16.6 на любом мониторе (утверждено пользователем)
+  const zStart = Math.max(map.getMinZoom(), 16.6);
   const k = Math.pow(2, zStart - map.getZoom());
   const cx = (minX + maxX) / 2;                 // полоса по центру по горизонтали
   const cy = maxY - (h / 2 - SEA) / k;          // нижний край участков → на h-SEA (1 см моря)
