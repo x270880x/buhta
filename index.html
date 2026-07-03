@@ -828,7 +828,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '4.6';
+const BUILD_VERSION = '4.7';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1756,6 +1756,7 @@ function computeStats() {
     zapAddr: ps.filter(p => p.zaddr).length,                                     // старый запорожский адрес
     khAddr: ps.filter(p => p.fias).length,                                       // новый херсонский адрес
     rr: ps.filter(p => p.rr).length,                                             // перерегистрация в Росреестре ХО
+    mfc: ps.filter(p => p.mfc).length,                                           // подано на регистрацию в МФЦ (ожидает)
     housesTotal: housesBound + ub.length,
     housesZapAddr: ps.reduce((a, p) => a + (((p.zaddr || '').match(/дом\s*\d/g)) || []).length, 0),
     housesZapCad: ps.filter(p => (p.bcadrf || '').startsWith('96')).length + ub.filter(h => (h.bcadrf || '').startsWith('96')).length,
@@ -1763,7 +1764,8 @@ function computeStats() {
     housesKhAddr: housesBound + ub.length,
     // РР только по домам с СОБСТВЕННОЙ выпиской (brr у участка / rr у непривязанного дома),
     // дом на перерегистрированном участке сам по себе не считается
-    housesRR: withB.filter(p => p.brr).reduce((a, p) => a + nHouses(p.building), 0) + ub.filter(h => h.rr).length
+    housesRR: withB.filter(p => p.brr).reduce((a, p) => a + nHouses(p.building), 0) + ub.filter(h => h.rr).length,
+    housesMfc: withB.filter(p => p.bmfc).reduce((a, p) => a + nHouses(p.building), 0) + ub.filter(h => h.mfc).length
   };
 }
 function showStats() {
@@ -1776,6 +1778,7 @@ function showStats() {
     + row('Уже имеют херсонский кадастр (94:…)', s.khCad)
     + row('Со старым запорожским адресом', s.zapAddr)
     + row('Присвоен херсонский адрес в ФИАС', s.khAddr)
+    + row('Подано на регистрацию в МФЦ', s.mfc)
     + row('🟢 Адрес сменён в Росреестре (Херсонская обл.)', s.rr)
     + `<div class="stats-sec">Дома</div>`
     + row('Всего домов', s.housesTotal)
@@ -1783,6 +1786,7 @@ function showStats() {
     + row('С запорожским кадастром (96:…)', s.housesZapCad)
     + row('Уже имеют херсонский кадастр (94:…)', s.housesKhCad)
     + row('Присвоен херсонский адрес в ФИАС', s.housesKhAddr)
+    + row('Подано на регистрацию в МФЦ', s.housesMfc)
     + row('🟢 Адрес сменён в Росреестре (Херсонская обл.)', s.housesRR);
   document.getElementById('stats-modal').classList.add('open');
 }
