@@ -188,6 +188,31 @@
   .leaflet-popup-content .pname { font-weight: 600; color: var(--accent); font-size: 13px; }
   .leaflet-popup-content .pstats { margin-top: 4px; color: var(--muted); font-size: 11px; font-family: 'IBM Plex Mono', monospace; }
 
+  /* Статистика (кнопка в шапке + модалка) */
+  #stats-btn {
+    background: var(--surface2); color: var(--accent); border: 1px solid var(--accent);
+    border-radius: 4px; padding: 6px 12px; cursor: pointer;
+    font-family: inherit; font-size: 12px; font-weight: 600; align-self: center;
+  }
+  #stats-btn:hover { background: var(--accent); color: #1a1a1a; }
+  #stats-modal {
+    position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,.55);
+    display: none; align-items: center; justify-content: center;
+  }
+  #stats-modal.open { display: flex; }
+  .stats-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    width: min(460px, 92vw); max-height: 86vh; overflow-y: auto;
+    padding: 14px 18px 18px; box-shadow: 0 8px 40px rgba(0,0,0,.6);
+  }
+  .stats-head { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 15px; color: #fff; margin-bottom: 10px; }
+  .stats-head button { background: none; border: none; color: var(--muted); font-size: 22px; cursor: pointer; line-height: 1; padding: 0 2px; }
+  .stats-head button:hover { color: #fff; }
+  .stats-sec { color: var(--accent); font-weight: 700; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; margin: 12px 0 6px; }
+  .stats-row { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .stats-row:last-child { border-bottom: none; }
+  .stats-row .n { font-family: 'IBM Plex Mono', monospace; color: var(--accent); font-weight: 700; white-space: nowrap; }
+
   /* Search results pane */
   /* высота под ~7 результатов — «Последние просмотренные» отступают вниз (они в потоке, margin-top:auto) */
   #search-results { max-height: 480px; overflow-y: auto; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; margin-top: 4px; display: none; }
@@ -308,8 +333,15 @@
     <div><div class="v" id="hstat-councils">0</div><div class="l">сельсоветов</div></div>
     <div><div class="v" id="hstat-filtered">—</div><div class="l">отфильтр. участков</div></div>
     <div><div class="v" id="hstat-filtered-area">—</div><div class="l">отфильтр. га</div></div>
+    <button id="stats-btn" title="Статистика по участкам и домам">📊 Статистика</button>
   </div>
 </header>
+<div id="stats-modal">
+  <div class="stats-card">
+    <div class="stats-head"><span>📊 Статистика</span><button id="stats-close">×</button></div>
+    <div id="stats-body"></div>
+  </div>
+</div>
 
 <div class="layout">
   <button id="panel-toggle" title="Меню" onclick="document.body.classList.add('panel-open')">☰</button>
@@ -795,7 +827,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '4.3';
+const BUILD_VERSION = '4.4';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1707,6 +1739,51 @@ document.querySelectorAll('.egrn-btn').forEach(btn => {
     applyEgrnFilter();
   });
 });
+
+// Статистика: считается на лету из данных участков
+function computeStats() {
+  const c = COUNCILS.find(c => c.code === '2320355400');
+  const ps = (c && c.parcels) || [];
+  const nHouses = b => { const m = b.match(/стр\.\s*([^)]+)/); return m ? m[1].split(',').length : 1; };
+  const withB = ps.filter(p => p.building);
+  return {
+    total: ps.length,
+    zapEgrn: ps.filter(p => p.egrn && (p.cadrf || '').startsWith('96')).length, // ЕГРН + запорожский кадастр
+    khCad: ps.filter(p => (p.cadrf || '').startsWith('94')).length,             // херсонский кадастр (94…)
+    zapAddr: ps.filter(p => p.zaddr).length,                                     // старый запорожский адрес
+    khAddr: ps.filter(p => p.fias).length,                                       // новый херсонский адрес
+    rr: ps.filter(p => p.rr).length,                                             // перерегистрация в Росреестре ХО
+    housesTotal: withB.reduce((a, p) => a + nHouses(p.building), 0),
+    housesZapAddr: ps.reduce((a, p) => a + (((p.zaddr || '').match(/дом\s*\d/g)) || []).length, 0),
+    housesZapCad: ps.filter(p => (p.bcadrf || '').startsWith('96')).length,
+    housesKhCad: ps.filter(p => (p.bcadrf || '').startsWith('94')).length,
+    housesKhAddr: withB.length ? withB.reduce((a, p) => a + nHouses(p.building), 0) : 0,
+    housesRR: withB.filter(p => p.rr).length
+  };
+}
+function showStats() {
+  const s = computeStats();
+  const row = (t, n) => `<div class="stats-row"><span>${t}</span><span class="n">${n}</span></div>`;
+  document.getElementById('stats-body').innerHTML =
+    `<div class="stats-sec">Участки</div>`
+    + row('Всего участков', s.total)
+    + row('Имели ЕГРН с запорожским кадастром (96:…)', s.zapEgrn)
+    + row('Уже имеют херсонский кадастр (94:…)', s.khCad)
+    + row('Со старым запорожским адресом', s.zapAddr)
+    + row('Получили херсонский адрес', s.khAddr)
+    + row('🟢 Адрес сменён в Росреестре (Херсонская обл.)', s.rr)
+    + `<div class="stats-sec">Дома</div>`
+    + row('Всего домов', s.housesTotal)
+    + row('Имели запорожский адрес', s.housesZapAddr)
+    + row('С запорожским кадастром (96:…)', s.housesZapCad)
+    + row('Уже имеют херсонский кадастр (94:…)', s.housesKhCad)
+    + row('Получили херсонский адрес', s.housesKhAddr)
+    + row('🟢 Адрес сменён в Росреестре (Херсонская обл.)', s.housesRR);
+  document.getElementById('stats-modal').classList.add('open');
+}
+document.getElementById('stats-btn').addEventListener('click', showStats);
+document.getElementById('stats-close').addEventListener('click', () => document.getElementById('stats-modal').classList.remove('open'));
+document.getElementById('stats-modal').addEventListener('click', e => { if (e.target.id === 'stats-modal') e.target.classList.remove('open'); });
 
 // Пересчёт размера карты при повороте телефона / ресайзе
 let _resizeT;
