@@ -626,6 +626,21 @@ const rfCornerIconGreen = flagIcon({ pole: '#0a5c2a', flag: '#2ecc71' });
 function addRfCorners(layer, council) {
   const grp = L.layerGroup().addTo(map);
   rfCornerGroups.push(grp);
+  // Точка внутри СВОЕГО участка, но не внутри чужого — иначе у участков-контейнеров
+  // (0310, 0412…) флажок визуально «стоит» на вложенном участке
+  const rings = []; // [{cad, ring, bbox}]
+  layer.eachLayer(l => {
+    const g = l.feature.geometry;
+    const polys = g.type === 'Polygon' ? [g.coordinates] : g.coordinates;
+    polys.forEach(poly => {
+      const r = poly[0];
+      const xs = r.map(p => p[0]), ys = r.map(p => p[1]);
+      rings.push({ cad: l.feature.properties.cadnum, ring: r,
+        bbox: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)] });
+    });
+  });
+  const insideForeign = (x, y, cad) => rings.some(r =>
+    r.cad !== cad && x >= r.bbox[0] && x <= r.bbox[2] && y >= r.bbox[1] && y <= r.bbox[3] && pointInRing(x, y, r.ring));
   layer.eachLayer(l => {
     const cad = l.feature.properties.cadnum;
     const d = (council.parcels || []).find(p => p.c === cad);
@@ -633,20 +648,24 @@ function addRfCorners(layer, council) {
     const g = l.feature.geometry;
     const ring = g.type === 'Polygon' ? g.coordinates[0] : g.coordinates[0][0];
     const xs = ring.map(p => p[0]), ys = ring.map(p => p[1]);
-    // центр участка (центроид вершин); если вне — сканируем от центра
-    let cx = xs.reduce((a, b) => a + b, 0) / xs.length;
-    let cy = ys.reduce((a, b) => a + b, 0) / ys.length;
-    if (!pointInRing(cx, cy, ring)) {
-      const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
-      let found = false;
-      for (let fy = 0.5; fy <= 0.9 && !found; fy += 0.1)
-        for (let fx = 0.3; fx <= 0.7 && !found; fx += 0.1) {
-          const tx = minX + (maxX - minX) * fx, ty = minY + (maxY - minY) * fy;
-          if (pointInRing(tx, ty, ring)) { cx = tx; cy = ty; found = true; }
-        }
-      if (!found) return;
+    const ccx = xs.reduce((a, b) => a + b, 0) / xs.length;
+    const ccy = ys.reduce((a, b) => a + b, 0) / ys.length;
+    const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+    // кандидаты: центроид + сетка 9×9, ближние к центру — первыми
+    const cands = [[ccx, ccy]];
+    for (let fy = 0.1; fy <= 0.9; fy += 0.1)
+      for (let fx = 0.1; fx <= 0.9; fx += 0.1)
+        cands.push([minX + (maxX - minX) * fx, minY + (maxY - minY) * fy]);
+    cands.sort((a, b) => (Math.hypot(a[0]-ccx, a[1]-ccy)) - (Math.hypot(b[0]-ccx, b[1]-ccy)));
+    let best = null, fallback = null;
+    for (const [tx, ty] of cands) {
+      if (!pointInRing(tx, ty, ring)) continue;
+      if (!fallback) fallback = [tx, ty];
+      if (!insideForeign(tx, ty, cad)) { best = [tx, ty]; break; }
     }
-    L.marker([cy, cx], { icon: d.rr ? rfCornerIconGreen : rfCornerIcon, interactive: false, keyboard: false }).addTo(grp);
+    const pt = best || fallback;
+    if (!pt) return;
+    L.marker([pt[1], pt[0]], { icon: d.rr ? rfCornerIconGreen : rfCornerIcon, interactive: false, keyboard: false }).addTo(grp);
   });
 }
 
@@ -776,7 +795,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '4.2';
+const BUILD_VERSION = '4.3';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
