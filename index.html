@@ -486,6 +486,7 @@ async function ensureCouncilParcels(council) {
       if (!resp.ok) { council.parcels = []; return []; }
       const data = await resp.json();
       council.parcels = data.parcels || [];
+      council.unbound = data.unbound || []; // дома без привязки к укр. участку (для статистики)
       return council.parcels;
     } catch (e) {
       console.warn(`No data for ${council.code}:`, e);
@@ -827,7 +828,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '4.4';
+const BUILD_VERSION = '4.5';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1744,8 +1745,10 @@ document.querySelectorAll('.egrn-btn').forEach(btn => {
 function computeStats() {
   const c = COUNCILS.find(c => c.code === '2320355400');
   const ps = (c && c.parcels) || [];
+  const ub = (c && c.unbound) || []; // дома без привязки к укр. участку (Набережная 46 А/Б/В)
   const nHouses = b => { const m = b.match(/стр\.\s*([^)]+)/); return m ? m[1].split(',').length : 1; };
   const withB = ps.filter(p => p.building);
+  const housesBound = withB.reduce((a, p) => a + nHouses(p.building), 0);
   return {
     total: ps.length,
     zapEgrn: ps.filter(p => p.egrn && (p.cadrf || '').startsWith('96')).length, // ЕГРН + запорожский кадастр
@@ -1753,12 +1756,14 @@ function computeStats() {
     zapAddr: ps.filter(p => p.zaddr).length,                                     // старый запорожский адрес
     khAddr: ps.filter(p => p.fias).length,                                       // новый херсонский адрес
     rr: ps.filter(p => p.rr).length,                                             // перерегистрация в Росреестре ХО
-    housesTotal: withB.reduce((a, p) => a + nHouses(p.building), 0),
+    housesTotal: housesBound + ub.length,
     housesZapAddr: ps.reduce((a, p) => a + (((p.zaddr || '').match(/дом\s*\d/g)) || []).length, 0),
-    housesZapCad: ps.filter(p => (p.bcadrf || '').startsWith('96')).length,
-    housesKhCad: ps.filter(p => (p.bcadrf || '').startsWith('94')).length,
-    housesKhAddr: withB.length ? withB.reduce((a, p) => a + nHouses(p.building), 0) : 0,
-    housesRR: withB.filter(p => p.rr).length
+    housesZapCad: ps.filter(p => (p.bcadrf || '').startsWith('96')).length + ub.filter(h => (h.bcadrf || '').startsWith('96')).length,
+    housesKhCad: ps.filter(p => (p.bcadrf || '').startsWith('94')).length + ub.filter(h => (h.bcadrf || '').startsWith('94')).length,
+    housesKhAddr: housesBound + ub.length,
+    // РР только по домам с СОБСТВЕННОЙ выпиской (brr у участка / rr у непривязанного дома),
+    // дом на перерегистрированном участке сам по себе не считается
+    housesRR: withB.filter(p => p.brr).reduce((a, p) => a + nHouses(p.building), 0) + ub.filter(h => h.rr).length
   };
 }
 function showStats() {
