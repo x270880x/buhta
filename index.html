@@ -189,7 +189,8 @@
   .leaflet-popup-content .pstats { margin-top: 4px; color: var(--muted); font-size: 11px; font-family: 'IBM Plex Mono', monospace; }
 
   /* Search results pane */
-  #search-results { max-height: 180px; overflow-y: auto; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; margin-top: 4px; display: none; }
+  /* высота под ~7 результатов — «Последние просмотренные» отступают вниз (они в потоке, margin-top:auto) */
+  #search-results { max-height: 480px; overflow-y: auto; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; margin-top: 4px; display: none; }
   #search-results .item {
     padding: 6px 8px; font-size: 11px; cursor: pointer;
     border-bottom: 1px solid var(--border);
@@ -775,7 +776,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '4.1';
+const BUILD_VERSION = '4.2';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
