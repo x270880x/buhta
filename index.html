@@ -611,14 +611,17 @@ async function loadCouncilPolygons(code) {
 }
 
 // Красный уголок-маркер на участках с присвоенным адресом РФ
-// Красный треугольный флажок (по центру участка с адресом РФ)
-const rfCornerIcon = L.divIcon({
+// Флажок по центру участка с адресом РФ: красный = адрес присвоен,
+// зелёный = уже прошла (пере)регистрация в Росреестре по Херсонской области (поле rr)
+const flagIcon = color => L.divIcon({
   html: '<div style="position:relative;width:14px;height:16px">'
-      + '<div style="position:absolute;left:6px;top:0;width:1.5px;height:16px;background:#7a1010"></div>'
-      + '<div style="position:absolute;left:7px;top:1px;width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:9px solid #e23b3b;filter:drop-shadow(0 1px 1px rgba(0,0,0,.6))"></div>'
+      + `<div style="position:absolute;left:6px;top:0;width:1.5px;height:16px;background:${color.pole}"></div>`
+      + `<div style="position:absolute;left:7px;top:1px;width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:9px solid ${color.flag};filter:drop-shadow(0 1px 1px rgba(0,0,0,.6))"></div>`
       + '</div>',
   className: '', iconSize: [14, 16], iconAnchor: [6, 16]   // основание флажка в точке
 });
+const rfCornerIcon = flagIcon({ pole: '#7a1010', flag: '#e23b3b' });
+const rfCornerIconGreen = flagIcon({ pole: '#0a5c2a', flag: '#2ecc71' });
 function addRfCorners(layer, council) {
   const grp = L.layerGroup().addTo(map);
   rfCornerGroups.push(grp);
@@ -642,7 +645,7 @@ function addRfCorners(layer, council) {
         }
       if (!found) return;
     }
-    L.marker([cy, cx], { icon: rfCornerIcon, interactive: false, keyboard: false }).addTo(grp);
+    L.marker([cy, cx], { icon: d.rr ? rfCornerIconGreen : rfCornerIcon, interactive: false, keyboard: false }).addTo(grp);
   });
 }
 
@@ -720,6 +723,7 @@ function buildParcelPopup(cad, data, council) {
       ${data.cadrf ? `<div style="margin-top:4px"><span title="есть РФ-кадастр">🇷🇺</span> <b style="color:#aaa">кадастровый РФ:</b> <span style="font-family:'IBM Plex Mono',monospace;color:#e8c547">${data.cadrf}</span>${COPY_BTN(data.cadrf)}</div>` : ''}
       ${data.egrn ? `<div style="color:#4caf7d;font-weight:600;margin-top:2px">✓ оформлен ЕГРН${(typeof data.egrn==='string' && data.egrn && data.egrn!=='да') ? ` · ${data.egrn}` : ''}</div>` : ''}
       ${data.fias ? `<div style="margin-top:4px"><b style="color:#aaa">адрес РФ:</b> с. Бухта, ${data.fias}</div>` : ''}
+      ${data.rr ? `<div style="color:#2ecc71;font-weight:600;margin-top:2px">🟢 Зарегистрирован в Росреестре (Херсонская обл.)</div>` : ''}
       ${data.building ? `<div style="margin-top:5px;padding:5px 8px;border:1px solid var(--border);border-radius:4px"><b style="color:#aaa">🏠 Здание:</b> ${data.building}${data.bcadrf ? `<div style="margin-top:2px"><b style="color:#aaa">кадастр здания:</b> <span style="font-family:'IBM Plex Mono',monospace;color:#e8c547">${data.bcadrf}</span>${COPY_BTN(data.bcadrf)}</div>` : ''}</div>` : ''}
       ${data.post ? `<div style="color:#aaa;font-size:11px;margin-top:3px">постановление № ${data.post}</div>` : ''}
       ${otRu ? `<div style="color:#aaa;font-size:12px;margin-top:6px">${otRu}</div>` : ''}
@@ -771,7 +775,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '4.0';
+const BUILD_VERSION = '4.1';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1481,6 +1485,10 @@ async function navigateToParcel(cadnum) {
 
 const CADNUM_RE = /^\d{10}:\d{2}:\d{3}:\d{4}$/;
 
+// Ввод в неправильной раскладке: латиница → русские буквы той же клавиши («yf,thtiyfz» → «набережная»)
+const LAYOUT_EN_RU = {'q':'й','w':'ц','e':'у','r':'к','t':'е','y':'н','u':'г','i':'ш','o':'щ','p':'з','[':'х',']':'ъ','a':'ф','s':'ы','d':'в','f':'а','g':'п','h':'р','j':'о','k':'л','l':'д',';':'ж','\'':'э','z':'я','x':'ч','c':'с','v':'м','b':'и','n':'т','m':'ь',',':'б','.':'ю','`':'ё','{':'х','}':'ъ',':':'ж','"':'э','<':'б','>':'ю','~':'ё'};
+const fixLayout = s => s.toLowerCase().split('').map(ch => LAYOUT_EN_RU[ch] || ch).join('');
+
 search.addEventListener('input', e => {
   const q = e.target.value.trim();
   if (q.length < 3) { sr.style.display = 'none'; return; }
@@ -1489,8 +1497,8 @@ search.addEventListener('input', e => {
     navigateToParcel(q);
     return;
   }
-  // 4+ цифр (или фрагмент кадастра с ':') → искать участки по кадастру (укр / РФ / здания)
-  if (/^[\d:/]{4,}$/.test(q)) {
+  // 3+ цифр (или фрагмент кадастра с ':') → искать участки по кадастру (укр / РФ / здания)
+  if (/^[\d:/]{3,}$/.test(q)) {
     const qd = q.replace(/:/g, '');
     const results = [];
     for (const c of COUNCILS) {
@@ -1510,31 +1518,42 @@ search.addEventListener('input', e => {
     return;
   }
   // Free text — search across loaded councils (partial coverage)
-  const ql = q.toLowerCase();
-  const tokens = ql.split(/[\s,]+/).filter(Boolean); // «набережная 76» → [набережная, 76]
-  const results = [];
-  for (const c of COUNCILS) {
-    // Search council name
-    if (c.name.toLowerCase().includes(ql)) {
-      results.push({ type: 'council', council: c });
-      if (results.length >= 50) break;
-    }
-    // Search loaded parcels (those councils that user already opened)
-    if (c.parcels) {
-      for (const p of c.parcels) {
-        // Адресный/именной текст (без кадастров — чтобы число «76» не ловило кадастр :276)
-        const hay = [p.o, p.r, p.ad, p.fias, p.zn, p.building]
-          .filter(Boolean).join(' ').toLowerCase();
-        // кадастры матчим только длинными токенами (содержат ':' или длиннее 5 символов)
-        const cadHay = [p.cadrf, p.bcadrf, p.c].filter(Boolean).join(' ').toLowerCase();
-        const hit = tokens.every(t => hay.includes(t) || ((t.includes(':') || t.length > 5) && cadHay.includes(t)));
-        if (hit) {
-          results.push({ type: 'parcel', p, council: c });
-          if (results.length >= 50) break;
-        }
+  const textResults = qstr => {
+    const ql = qstr.toLowerCase();
+    const tokens = ql.split(/[\s,]+/).filter(Boolean); // «набережная 76» → [набережная, 76]
+    if (!tokens.length) return [];
+    const results = [];
+    for (const c of COUNCILS) {
+      // Search council name
+      if (c.name.toLowerCase().includes(ql)) {
+        results.push({ type: 'council', council: c });
+        if (results.length >= 50) break;
       }
-      if (results.length >= 50) break;
+      // Search loaded parcels (those councils that user already opened)
+      if (c.parcels) {
+        for (const p of c.parcels) {
+          // Адресный/именной текст (без кадастров — чтобы число «76» не ловило кадастр :276)
+          const hay = [p.o, p.r, p.ad, p.fias, p.zn, p.building]
+            .filter(Boolean).join(' ').toLowerCase();
+          // кадастры матчим только длинными токенами (содержат ':' или длиннее 5 символов)
+          const cadHay = [p.cadrf, p.bcadrf, p.c].filter(Boolean).join(' ').toLowerCase();
+          const hit = tokens.every(t => hay.includes(t) || ((t.includes(':') || t.length > 5) && cadHay.includes(t)));
+          if (hit) {
+            results.push({ type: 'parcel', p, council: c });
+            if (results.length >= 50) break;
+          }
+        }
+        if (results.length >= 50) break;
+      }
     }
+    return results;
+  };
+  let results = textResults(q);
+  // Ничего не нашли, а в запросе есть латиница? Возможно, забыли переключить
+  // раскладку: «yf,thtiyfz» → «набережная», «vjhiytd» → «моршнев»
+  if (!results.length && /[a-z\[\];'`,.{}:"<>~]/i.test(q)) {
+    const q2 = fixLayout(q);
+    if (q2 !== q.toLowerCase()) results = textResults(q2);
   }
   renderSearchResults(results);
 });
@@ -1553,7 +1572,7 @@ function renderSearchResults(results) {
       </div>`;
     return `
       <div class="item" data-i="${i}">
-        <div class="cad">${escapeHtml(r.p.c)}${r.p.fias ? ' 🚩' : ''}</div>
+        <div class="cad">${escapeHtml(r.p.c)}${r.p.fias ? (r.p.rr ? ' 🟢' : ' 🚩') : ''}</div>
         <div class="who">${r.p.o? escapeHtml(r.p.o.slice(0,40)) : escapeHtml(r.council.name)}${znDisp(r.p.zn)? ' · '+escapeHtml(znDisp(r.p.zn)):''}</div>
         ${r.p.fias ? `<div class="who" style="color:#e8c547">📍 с. Бухта, ${escapeHtml(r.p.fias)}${r.p.building?' · зд. '+escapeHtml(r.p.building):''}</div>` : ''}${r.p.cadrf ? `<div class="who" style="font-family:'IBM Plex Mono',monospace;color:#5bb8ff">🇷🇺 ${escapeHtml(r.p.cadrf)}</div>` : ''}
       </div>`;
