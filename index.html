@@ -828,7 +828,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '4.5';
+const BUILD_VERSION = '4.6';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1775,14 +1775,14 @@ function showStats() {
     + row('Имели ЕГРН с запорожским кадастром (96:…)', s.zapEgrn)
     + row('Уже имеют херсонский кадастр (94:…)', s.khCad)
     + row('Со старым запорожским адресом', s.zapAddr)
-    + row('Получили херсонский адрес', s.khAddr)
+    + row('Присвоен херсонский адрес в ФИАС', s.khAddr)
     + row('🟢 Адрес сменён в Росреестре (Херсонская обл.)', s.rr)
     + `<div class="stats-sec">Дома</div>`
     + row('Всего домов', s.housesTotal)
     + row('Имели запорожский адрес', s.housesZapAddr)
     + row('С запорожским кадастром (96:…)', s.housesZapCad)
     + row('Уже имеют херсонский кадастр (94:…)', s.housesKhCad)
-    + row('Получили херсонский адрес', s.housesKhAddr)
+    + row('Присвоен херсонский адрес в ФИАС', s.housesKhAddr)
     + row('🟢 Адрес сменён в Росреестре (Херсонская обл.)', s.housesRR);
   document.getElementById('stats-modal').classList.add('open');
 }
