@@ -983,7 +983,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.7';
+const BUILD_VERSION = '5.8';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1944,7 +1944,8 @@ function kuvdSection(k) {
     const c = o.сверка, d = c.разница;
     const mark = d === 0 ? '<span style="color:#2ecc71">✓</span>'
       : d < 0 ? `<span style="color:#e8c547">−${-d}</span>` : `<span style="color:#5bb8ff">+${d}</span>`;
-    return `<div class="stats-row"><span>${o.владелец}</span>
+    return `<div class="stats-row" title="${c.обьектов} об.: ${c.с_запорожским_кадастром}×1 + ${c.без_кадастра_рф}×2">
+      <span>${o.владелец}</span>
       <span class="n">${o.номеров} / ${c.ожидается_кувд} ${mark}</span></div>`;
   }).join('');
   return `<div class="stats-sec">Заявления (КУВД)</div>`
@@ -1958,7 +1959,8 @@ function kuvdSection(k) {
     + row('Статус не указан', noStatus)
     + `<div class="stats-sec">КУВД по владельцам · прислано / ожидается</div>`
     + `<div style="color:var(--muted);font-size:11px;margin:-2px 0 6px;line-height:1.4">
-        На каждый объект — два заявления: кадастровый учёт и регистрация права.</div>`
+        Был кадастр РФ (даже запорожский 96:…) → 1 заявление, на смену адреса.
+        Не было → 2: кадастровый учёт и регистрация права.</div>`
     + owners;
 }
 
@@ -2132,11 +2134,12 @@ function kuvdText(k) {
   const t = k.итого, pr = k.проблемы;
   const L = ['КУВД — с. Бухта (Генический р-н, Херсонская обл.)',
     `Уникальных: ${t.уникальных} · дублей в списках: ${t.дублей} · битых: ${pr.битые_номера.length} · без владельца: ${t.без_владельца}`,
-    'На каждый объект подаётся 2 заявления: кадастровый учёт и регистрация права.',
+    k.правило_сверки || '',
     'Статусы указаны только там, где они известны.', ''];
   k.владельцы.forEach(o => {
-    const ob = o.обьектов_в_базе;
-    L.push(`=== ${o.владелец} — ${o.номеров} шт. (в базе ${ob.участки} уч. + ${ob.здания} зд.) ===`);
+    const ob = o.обьектов_в_базе, s = o.сверка;
+    L.push(`=== ${o.владелец} — ${o.номеров} шт. (в базе ${ob.участки} уч. + ${ob.здания} зд.; `
+      + `ожидается ${s.ожидается_кувд}, расхождение ${s.разница > 0 ? '+' : ''}${s.разница}) ===`);
     o.номера.forEach(it => {
       let s = it.кувд;
       if (it.статус) s += `  [${it.статус}]`;
@@ -2166,7 +2169,9 @@ function renderKuvd(k) {
      битых номеров <b>${pr.битые_номера.length}</b> ·
      без владельца <b style="color:#e8c547">${t.без_владельца}</b>.
      Цвет полосы: 🟢 готово · 🟡 приостановка · 🔴 отказ · серый — статус не указан.
-     Строку с приостановкой можно кликнуть — откроется участок.`;
+     Строку с приостановкой можно кликнуть — откроется участок.<br>
+     <span style="color:var(--muted)">Ожидается: объект уже с кадастром РФ (даже запорожским 96:…) → 1 заявление на смену адреса;
+     объект без кадастра → 2 заявления, кадастровый учёт и регистрация права.</span>`;
 
   const chip = it => {
     const c = KUVD_ST[it.статус] || '#444';
@@ -2182,10 +2187,11 @@ function renderKuvd(k) {
   k.владельцы.forEach(o => {
     const ob = o.обьектов_в_базе, s = o.сверка, d = s.разница;
     const mark = d === 0 ? '<span style="color:#2ecc71">сходится</span>'
-      : d < 0 ? `<span style="color:#e8c547">не хватает ${-d}</span>`
-              : `<span style="color:#5bb8ff">на ${d} больше</span>`;
+      : d < 0 ? `<span style="color:#e8c547">расхождение −${-d}</span>`
+              : `<span style="color:#5bb8ff">расхождение +${d}</span>`;
     html += `<div class="kuvd-owner" data-owner="${esc(o.владелец.toLowerCase())}">${esc(o.владелец)} — ${o.номеров}</div>
-      <div class="kuvd-sub">в базе ${ob.участки} уч. + ${ob.здания} зд. · ожидается ${s.ожидается_кувд} · ${mark}</div>
+      <div class="kuvd-sub">в базе ${ob.участки} уч. + ${ob.здания} зд. ·
+        ожидается ${s.ожидается_кувд} (${s.с_запорожским_кадастром}×1 + ${s.без_кадастра_рф}×2) · ${mark}</div>
       <div class="kuvd-grid">${o.номера.map(chip).join('')}</div>`;
   });
   k.без_владельца.forEach(u => {
