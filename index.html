@@ -998,7 +998,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.20';
+const BUILD_VERSION = '5.21';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1959,7 +1959,8 @@ function kuvdSection(k) {
     const c = o.сверка, d = c.разница;
     const mark = d === 0 ? '<span style="color:#2ecc71">✓</span>'
       : d < 0 ? `<span style="color:#e8c547">−${-d}</span>` : `<span style="color:#5bb8ff">+${d}</span>`;
-    return `<div class="stats-row" title="${c.обьектов} об.: ${c.с_запорожским_кадастром}×1 + ${c.без_кадастра_рф}×2">
+    const dop = c.доп_права ? ` + ${c.доп_права} доп. право` : '';
+    return `<div class="stats-row" title="${c.обьектов} об.: ${c.с_запорожским_кадастром}×1 + ${c.без_кадастра_рф}×2${dop}">
       <span>${o.владелец}</span>
       <span class="n">${o.номеров} / ${c.ожидается_кувд} ${mark}</span></div>`;
   }).join('');
@@ -2231,7 +2232,7 @@ function renderKuvd(k) {
               : `<span style="color:#5bb8ff">расхождение +${d}</span>`;
     html += `<div class="kuvd-owner" data-owner="${esc(o.владелец.toLowerCase())}">${esc(o.владелец)} — ${o.номеров}</div>
       <div class="kuvd-sub">в базе ${ob.участки} уч. + ${ob.здания} зд. ·
-        ожидается ${s.ожидается_кувд} (${s.с_запорожским_кадастром}×1 + ${s.без_кадастра_рф}×2) · ${mark}
+        ожидается ${s.ожидается_кувд} (${s.с_запорожским_кадастром}×1 + ${s.без_кадастра_рф}×2${s.доп_права ? ` + ${s.доп_права} доп. право` : ''}) · ${mark}
         ${o.примечание ? `<div style="margin-top:2px;color:#7a7a7a">${esc(o.примечание)}</div>` : ''}</div>
       <div class="kuvd-grid">${o.номера.map(chip).join('')}</div>`;
   });
@@ -2313,12 +2314,13 @@ function kuvdWorkbook(k) {
     'Владелец': label.get(o.владелец), 'Объектов': o.сверка.обьектов,
     'С зап. кадастром (×1)': o.сверка.с_запорожским_кадастром,
     'Без кадастра РФ (×2)': o.сверка.без_кадастра_рф,
+    'Доп. права по долям': o.сверка.доп_права || 0,
     'Ожидается КУВД': o.сверка.ожидается_кувд, 'Прислано': o.сверка.прислано,
     'Расхождение': o.сверка.разница,
   }));
   sverka.push({}, { 'Владелец': 'Правило:', 'Объектов': k.правило_сверки });
   const ws2 = XLSX.utils.json_to_sheet(sverka);
-  ws2['!cols'] = [{ wch: 32 }, { wch: 12 }, { wch: 20 }, { wch: 20 }, { wch: 16 }, { wch: 12 }, { wch: 14 }];
+  ws2['!cols'] = [{ wch: 32 }, { wch: 12 }, { wch: 20 }, { wch: 20 }, { wch: 18 }, { wch: 16 }, { wch: 12 }, { wch: 14 }];
 
   const pr = k.проблемы;
   const probs = [
