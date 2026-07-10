@@ -998,7 +998,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.14';
+const BUILD_VERSION = '5.15';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -2231,7 +2231,8 @@ function renderKuvd(k) {
               : `<span style="color:#5bb8ff">расхождение +${d}</span>`;
     html += `<div class="kuvd-owner" data-owner="${esc(o.владелец.toLowerCase())}">${esc(o.владелец)} — ${o.номеров}</div>
       <div class="kuvd-sub">в базе ${ob.участки} уч. + ${ob.здания} зд. ·
-        ожидается ${s.ожидается_кувд} (${s.с_запорожским_кадастром}×1 + ${s.без_кадастра_рф}×2) · ${mark}</div>
+        ожидается ${s.ожидается_кувд} (${s.с_запорожским_кадастром}×1 + ${s.без_кадастра_рф}×2) · ${mark}
+        ${o.примечание ? `<div style="margin-top:2px;color:#7a7a7a">${esc(o.примечание)}</div>` : ''}</div>
       <div class="kuvd-grid">${o.номера.map(chip).join('')}</div>`;
   });
   k.без_владельца.forEach(u => {
