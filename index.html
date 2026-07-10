@@ -189,17 +189,28 @@
   .leaflet-popup-content .pstats { margin-top: 4px; color: var(--muted); font-size: 11px; font-family: 'IBM Plex Mono', monospace; }
 
   /* Статистика (кнопка в шапке + модалка) */
-  #stats-btn {
+  #stats-btn, #reg-btn {
     background: var(--surface2); color: var(--accent); border: 1px solid var(--accent);
     border-radius: 4px; padding: 6px 12px; cursor: pointer;
     font-family: inherit; font-size: 12px; font-weight: 600; align-self: center;
   }
-  #stats-btn:hover { background: var(--accent); color: #1a1a1a; }
-  #stats-modal {
+  #stats-btn:hover, #reg-btn:hover { background: var(--accent); color: #1a1a1a; }
+  #stats-modal, #reg-modal {
     position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,.55);
     display: none; align-items: center; justify-content: center;
   }
-  #stats-modal.open { display: flex; }
+  #stats-modal.open, #reg-modal.open { display: flex; }
+  #reg-modal .stats-card { width: min(660px, 94vw); }
+  .reg-owner { color: var(--accent); font-weight: 700; font-size: 13px; margin: 14px 0 6px; letter-spacing: .5px; }
+  .reg-owner:first-child { margin-top: 4px; }
+  .reg-item { padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
+  .reg-item:last-child { border-bottom: none; }
+  .reg-obj { color: #e8e8e8; }
+  .reg-obj .kind { color: var(--muted); font-size: 11px; margin-left: 6px; }
+  .reg-num { font-family: 'IBM Plex Mono', monospace; color: #5bb8ff; font-size: 12px; margin-top: 2px; word-break: break-all; }
+  .reg-meta { color: var(--muted); font-size: 11px; margin-top: 1px; }
+  .reg-note { color: var(--muted); font-size: 11px; line-height: 1.45; margin-bottom: 6px; }
+  .reg-pending { color: #e8c547; font-weight: 700; font-size: 12px; letter-spacing: .5px; margin: 16px 0 6px; }
   .stats-card {
     background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
     width: min(460px, 92vw); max-height: 86vh; overflow-y: auto;
@@ -334,12 +345,19 @@
     <div><div class="v" id="hstat-filtered">—</div><div class="l">отфильтр. участков</div></div>
     <div><div class="v" id="hstat-filtered-area">—</div><div class="l">отфильтр. га</div></div>
     <button id="stats-btn" title="Статистика по участкам и домам">📊 Статистика</button>
+    <button id="reg-btn" title="Номера регистрации права в Росреестре">📄 Регистрации</button>
   </div>
 </header>
 <div id="stats-modal">
   <div class="stats-card">
     <div class="stats-head"><span>📊 Статистика</span><button id="stats-close">×</button></div>
     <div id="stats-body"></div>
+  </div>
+</div>
+<div id="reg-modal">
+  <div class="stats-card">
+    <div class="stats-head"><span>📄 Номера регистрации права</span><button id="reg-close">×</button></div>
+    <div id="reg-body"></div>
   </div>
 </div>
 
@@ -828,7 +846,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.0';
+const BUILD_VERSION = '5.1';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1793,6 +1811,43 @@ function showStats() {
 document.getElementById('stats-btn').addEventListener('click', showStats);
 document.getElementById('stats-close').addEventListener('click', () => document.getElementById('stats-modal').classList.remove('open'));
 document.getElementById('stats-modal').addEventListener('click', e => { if (e.target.id === 'stats-modal') e.target.classList.remove('open'); });
+
+// Реестр номеров госрегистрации права (registrations.json), сгруппирован по владельцу
+let REG_DATA = null;
+async function showRegistrations() {
+  const body = document.getElementById('reg-body');
+  document.getElementById('reg-modal').classList.add('open');
+  if (!REG_DATA) {
+    body.innerHTML = '<div class="reg-note">Загрузка…</div>';
+    try {
+      const r = await fetch('registrations.json');
+      REG_DATA = await r.json();
+    } catch (e) { body.innerHTML = '<div class="reg-note">Не удалось загрузить registrations.json</div>'; return; }
+  }
+  const esc = s => escapeHtml(String(s || ''));
+  let html = `<div class="reg-note">${esc(REG_DATA.note)}</div>`;
+  REG_DATA.owners.forEach(o => {
+    html += `<div class="reg-owner">${esc(o.full)}</div>`;
+    o.items.forEach(it => {
+      html += `<div class="reg-item">
+        <div class="reg-obj">${esc(it.obj)}<span class="kind">${esc(it.kind)}</span></div>
+        ${it.reg ? `<div class="reg-num">${esc(it.reg)}${COPY_BTN(it.reg)}</div>` : ''}
+        <div class="reg-meta">кадастр ${esc(it.cad)}${it.date ? ' · ' + esc(it.date) : ''}${it.right ? ' · ' + esc(it.right) : ''}</div>
+      </div>`;
+    });
+  });
+  if (REG_DATA.pending && REG_DATA.pending.length) {
+    html += `<div class="reg-pending">Право ещё не зарегистрировано (${REG_DATA.pending.length})</div>`;
+    REG_DATA.pending.forEach(p => {
+      html += `<div class="reg-item"><div class="reg-obj">${esc(p.obj)}</div>
+        <div class="reg-meta">кадастр ${esc(p.cad)} · ${esc(p.note)}</div></div>`;
+    });
+  }
+  body.innerHTML = html;
+}
+document.getElementById('reg-btn').addEventListener('click', showRegistrations);
+document.getElementById('reg-close').addEventListener('click', () => document.getElementById('reg-modal').classList.remove('open'));
+document.getElementById('reg-modal').addEventListener('click', e => { if (e.target.id === 'reg-modal') e.target.classList.remove('open'); });
 
 // Пересчёт размера карты при повороте телефона / ресайзе
 let _resizeT;
