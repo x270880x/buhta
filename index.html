@@ -295,7 +295,7 @@
   /* Раскрывающаяся строка статистики (кадастры ХО) */
   .stats-row.link { cursor: pointer; }
   .stats-row.link:hover { background: var(--surface2); }
-  .stats-row.link .arrow { color: var(--muted); font-size: 10px; margin-right: 5px; display: inline-block; width: 8px; }
+  .stats-row.link .arrow { color: inherit; opacity: .7; font-size: 10px; margin-right: 5px; display: inline-block; width: 8px; }
   .stats-row.link.open .arrow { transform: rotate(90deg); }
   .stats-sub { display: none; padding: 2px 0 6px 14px; border-bottom: 1px solid var(--border); }
   .stats-sub.open { display: block; }
@@ -998,7 +998,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.12';
+const BUILD_VERSION = '5.13';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -2018,7 +2018,8 @@ async function showStats() {
   const kh = kh94Objects();
   const row = (t, n) => `<div class="stats-row"><span>${t}</span><span class="n">${n}</span></div>`;
   // кликабельная строка: раскрывает список кадастров 94:…
-  const rowKh = (t, n) => `<div class="stats-row link" data-toggle="kh94"><span><span class="arrow">▶</span>${t}</span>
+  const rowKh = (t, n) => `<div class="stats-row link" data-toggle="kh94">
+    <span style="color:#2ecc71;font-weight:600"><span class="arrow">▶</span>${t}</span>
     <span class="n">${n}</span></div>` + kh94Block(kh);
   document.getElementById('stats-body').innerHTML =
     `<div class="stats-sec">Участки</div>`
