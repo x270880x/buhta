@@ -292,6 +292,21 @@
   .stats-row { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
   .stats-row:last-child { border-bottom: none; }
   .stats-row .n { font-family: 'IBM Plex Mono', monospace; color: var(--accent); font-weight: 700; white-space: nowrap; }
+  /* Раскрывающаяся строка статистики (кадастры ХО) */
+  .stats-row.link { cursor: pointer; }
+  .stats-row.link:hover { background: var(--surface2); }
+  .stats-row.link .arrow { color: var(--muted); font-size: 10px; margin-right: 5px; display: inline-block; width: 8px; }
+  .stats-row.link.open .arrow { transform: rotate(90deg); }
+  .stats-sub { display: none; padding: 2px 0 6px 14px; border-bottom: 1px solid var(--border); }
+  .stats-sub.open { display: block; }
+  .stats-sub .kh-item {
+    display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap;
+    padding: 4px 6px; border-left: 3px solid var(--st, #444); cursor: pointer; font-size: 12px;
+  }
+  .stats-sub .kh-item:hover { background: var(--surface2); }
+  .stats-sub .kh-item .cad { font-family: 'IBM Plex Mono', monospace; color: var(--st, #e8c547); }
+  .stats-sub .kh-item .meta { color: var(--muted); font-size: 11px; }
+  .stats-sub .empty { color: var(--muted); font-size: 11px; padding: 4px 6px; }
 
   /* Search results pane */
   /* высота под ~7 результатов — «Последние просмотренные» отступают вниз (они в потоке, margin-top:auto) */
@@ -983,7 +998,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.11';
+const BUILD_VERSION = '5.12';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1964,14 +1979,52 @@ function kuvdSection(k) {
     + owners;
 }
 
+// Объекты с херсонским кадастром (94:…) — участки, здания и unbound-дома
+function kh94Objects() {
+  const c = COUNCILS.find(x => x.code === '2320355400');
+  const ps = (c && c.parcels) || [], ub = (c && c.unbound) || [];
+  const is94 = cad => (cad || '').startsWith('94');
+  const out = [];
+  ps.forEach(p => {
+    if (is94(p.cadrf)) out.push({ cad: p.cadrf, kind: 'участок', addr: p.fias || '', o: p.o || '', target: p.c, dst: p.dst, rr: p.rr });
+    (p.blds || []).forEach(b => {
+      if (is94(b.cad)) out.push({ cad: b.cad, kind: 'здание', addr: b.lit || '', o: p.o || '', target: p.c, dst: b.dst, rr: b.rr });
+    });
+  });
+  ub.forEach(u => {
+    if (is94(u.cad)) out.push({ cad: u.cad, kind: 'здание', addr: u.fias || u.lit || '', o: u.o || '', target: null, dst: u.dst, rr: u.rr });
+  });
+  const tail = c2 => +(c2.split(':').pop()) || 0;
+  out.sort((a, b) => tail(a.cad) - tail(b.cad));
+  return out;
+}
+
+function kh94Block(list) {
+  const esc = s => escapeHtml(String(s || ''));
+  if (!list.length) return '<div class="stats-sub"><div class="empty">Пока нет объектов с кадастром 94:…</div></div>';
+  const items = list.map(o => {
+    const st = o.dst === 'stop' ? ST_COLOR.stop : o.dst === 'deny' ? ST_COLOR.deny : (o.rr ? ST_COLOR.ok : '#7a7a7a');
+    const tgt = o.target ? ` data-target="${esc(o.target)}"` : '';
+    return `<div class="kh-item" style="--st:${st}"${tgt}>
+      <span class="cad">${esc(o.cad)}</span>${COPY_BTN(o.cad)}
+      <span class="meta">${esc(o.kind)}${o.addr ? ' · ' + esc(o.addr) : ''}${o.o ? ' · ' + esc(o.o) : ''}</span>
+    </div>`;
+  }).join('');
+  return `<div class="stats-sub">${items}</div>`;
+}
+
 async function showStats() {
   const s = computeStats();
+  const kh = kh94Objects();
   const row = (t, n) => `<div class="stats-row"><span>${t}</span><span class="n">${n}</span></div>`;
+  // кликабельная строка: раскрывает список кадастров 94:…
+  const rowKh = (t, n) => `<div class="stats-row link" data-toggle="kh94"><span><span class="arrow">▶</span>${t}</span>
+    <span class="n">${n}</span></div>` + kh94Block(kh);
   document.getElementById('stats-body').innerHTML =
     `<div class="stats-sec">Участки</div>`
     + row('Всего участков', s.total)
     + row('Имели ЕГРН с запорожским кадастром (96:…)', s.zapEgrn)
-    + row('Уже имеют херсонский кадастр (94:…)', s.khCad)
+    + rowKh('Кадастровые ХО (94:…)', kh.length)
     + row('Со старым запорожским адресом', s.zapAddr)
     + row('Присвоен адрес ФИАС ХО', s.khAddr)
     + row('Подано на регистрацию в МФЦ', s.mfc)
@@ -1995,6 +2048,21 @@ async function showStats() {
   }
 }
 document.getElementById('stats-btn').addEventListener('click', showStats);
+// раскрытие списка кадастров ХО + переход к объекту по клику
+document.getElementById('stats-body').addEventListener('click', e => {
+  if (e.target.closest('button')) return;                 // кнопка «копировать» — не трогаем
+  const head = e.target.closest('.stats-row.link');
+  if (head) {
+    head.classList.toggle('open');
+    const sub = head.nextElementSibling;
+    if (sub && sub.classList.contains('stats-sub')) sub.classList.toggle('open');
+    return;
+  }
+  const item = e.target.closest('.kh-item');
+  if (!item || !item.dataset.target) return;
+  document.getElementById('stats-modal').classList.remove('open');
+  navigateToParcel(item.dataset.target);
+});
 document.getElementById('stats-close').addEventListener('click', () => document.getElementById('stats-modal').classList.remove('open'));
 document.getElementById('stats-modal').addEventListener('click', e => { if (e.target.id === 'stats-modal') e.target.classList.remove('open'); });
 
