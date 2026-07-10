@@ -189,18 +189,43 @@
   .leaflet-popup-content .pstats { margin-top: 4px; color: var(--muted); font-size: 11px; font-family: 'IBM Plex Mono', monospace; }
 
   /* Статистика (кнопка в шапке + модалка) */
-  #stats-btn, #info-btn {
+  #stats-btn, #info-btn, #kuvd-btn {
     background: var(--surface2); color: var(--accent); border: 1px solid var(--accent);
     border-radius: 4px; padding: 6px 12px; cursor: pointer;
     font-family: inherit; font-size: 12px; font-weight: 600; align-self: center;
   }
-  #stats-btn:hover, #info-btn:hover { background: var(--accent); color: #1a1a1a; }
-  #stats-modal, #info-modal {
+  #stats-btn:hover, #info-btn:hover, #kuvd-btn:hover { background: var(--accent); color: #1a1a1a; }
+  #stats-modal, #info-modal, #kuvd-modal {
     position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,.55);
     display: none; align-items: center; justify-content: center;
   }
-  #stats-modal.open, #info-modal.open { display: flex; }
-  #info-modal .stats-card { width: min(940px, 96vw); }
+  #stats-modal.open, #info-modal.open, #kuvd-modal.open { display: flex; }
+  #info-modal .stats-card, #kuvd-modal .stats-card { width: min(940px, 96vw); }
+
+  /* КУВД: список заявлений + скачивание */
+  /* специфичнее, чем .stats-head button (иначе оттуда прилетает font-size:22px) */
+  .stats-head button.kuvd-dl {
+    background: var(--surface2); color: var(--accent); border: 1px solid var(--accent);
+    border-radius: 4px; padding: 4px 10px; cursor: pointer; font-family: inherit;
+    font-size: 11px; font-weight: 600; line-height: 1.3; margin-left: auto; margin-right: 10px;
+  }
+  .stats-head button.kuvd-dl:hover { background: var(--accent); color: #1a1a1a; }
+  .kuvd-owner { color: var(--accent); font-weight: 700; font-size: 12px; letter-spacing: .8px;
+    text-transform: uppercase; margin: 14px 0 2px; }
+  .kuvd-owner:first-child { margin-top: 2px; }
+  .kuvd-owner.noname { color: #e8c547; }
+  .kuvd-sub { color: var(--muted); font-size: 11px; margin-bottom: 6px; }
+  .kuvd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(238px, 1fr)); gap: 4px 10px; }
+  .kuvd-n {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #d8d8d8;
+    padding: 3px 6px; border-left: 3px solid var(--st, #444); border-radius: 2px;
+  }
+  .kuvd-n.hit { background: var(--surface2); }
+  .kuvd-n.nohit { display: none; }
+  .kuvd-n .tag { font-family: inherit; font-size: 10px; color: var(--st); margin-left: 6px; font-weight: 600; }
+  .kuvd-n .warn { color: #e8c547; font-size: 10px; margin-left: 6px; }
+  .kuvd-n.jump { cursor: pointer; }
+  .kuvd-n.jump:hover { background: var(--surface2); }
 
   /* ИНФО: реестр объектов с адресом ФИАС ХО */
   .info-note { color: var(--muted); font-size: 11px; line-height: 1.45; margin-bottom: 8px; }
@@ -390,6 +415,7 @@
     <div><div class="v" id="hstat-filtered-area">—</div><div class="l">отфильтр. га</div></div>
     <button id="stats-btn" title="Статистика по участкам и зданиям">📊 Статистика</button>
     <button id="info-btn" title="Все адреса ФИАС ХО: владельцы, размеры, кадастры, статус документов">📋 ИНФО</button>
+    <button id="kuvd-btn" title="Все номера КУВД по владельцам, со скачиванием списка">🔢 КУВД</button>
   </div>
 </header>
 <div id="stats-modal">
@@ -415,6 +441,20 @@
       <button class="chip" data-f="none">⚪ Без документа<span class="n"></span></button>
     </div>
     <div id="info-body"></div>
+  </div>
+</div>
+<div id="kuvd-modal">
+  <div class="stats-card">
+    <div class="stats-head">
+      <span>🔢 КУВД — заявления в Росреестр</span>
+      <button class="kuvd-dl" id="kuvd-dl">⬇ Скачать список</button>
+      <button id="kuvd-close">×</button>
+    </div>
+    <div class="info-note" id="kuvd-note"></div>
+    <div class="info-tools">
+      <input id="kuvd-search" type="text" placeholder="фильтр: номер, владелец, статус…" autocomplete="off">
+    </div>
+    <div id="kuvd-body"></div>
   </div>
 </div>
 
@@ -943,7 +983,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.6';
+const BUILD_VERSION = '5.7';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -2083,6 +2123,126 @@ document.getElementById('info-body').addEventListener('click', e => {
   if (!row || !row.dataset.target) return;
   document.getElementById('info-modal').classList.remove('open');
   navigateToParcel(row.dataset.target);
+});
+
+// КУВД — полный список заявлений (kuvd.json): по владельцам + отдельно безымянные партии
+const KUVD_ST = { 'готово': '#2ecc71', 'приостановка': '#e8c547', 'отказ': '#e23b3b' };
+
+function kuvdText(k) {
+  const t = k.итого, pr = k.проблемы;
+  const L = ['КУВД — с. Бухта (Генический р-н, Херсонская обл.)',
+    `Уникальных: ${t.уникальных} · дублей в списках: ${t.дублей} · битых: ${pr.битые_номера.length} · без владельца: ${t.без_владельца}`,
+    'На каждый объект подаётся 2 заявления: кадастровый учёт и регистрация права.',
+    'Статусы указаны только там, где они известны.', ''];
+  k.владельцы.forEach(o => {
+    const ob = o.обьектов_в_базе;
+    L.push(`=== ${o.владелец} — ${o.номеров} шт. (в базе ${ob.участки} уч. + ${ob.здания} зд.) ===`);
+    o.номера.forEach(it => {
+      let s = it.кувд;
+      if (it.статус) s += `  [${it.статус}]`;
+      if (it.обьект) s += `  ${it.обьект}`;
+      if (it.до) s += `  до ${it.до}`;
+      if (it.дубль_в_списке) s += '  (прислан дважды)';
+      if (it['⚠']) s += '  (!) короткий номер — вероятна опечатка';
+      L.push(s);
+    });
+    L.push('');
+  });
+  k.без_владельца.forEach(u => {
+    const nm = u.владелец.replace(/^без владельца\s*/i, '').replace(/^\(|\)$/g, '');
+    L.push(`=== БЕЗ ВЛАДЕЛЬЦА · ${nm} — ${u.номеров} шт. ===`);
+    u.номера.forEach(it => L.push(it.кувд));
+    L.push('');
+  });
+  return L.join('\n');
+}
+
+function renderKuvd(k) {
+  const esc = s => escapeHtml(String(s || ''));
+  const t = k.итого, pr = k.проблемы;
+  document.getElementById('kuvd-note').innerHTML =
+    `Уникальных <b style="color:var(--accent)">${t.уникальных}</b> ·
+     дублей в присланных списках <b>${t.дублей}</b> ·
+     битых номеров <b>${pr.битые_номера.length}</b> ·
+     без владельца <b style="color:#e8c547">${t.без_владельца}</b>.
+     Цвет полосы: 🟢 готово · 🟡 приостановка · 🔴 отказ · серый — статус не указан.
+     Строку с приостановкой можно кликнуть — откроется участок.`;
+
+  const chip = it => {
+    const c = KUVD_ST[it.статус] || '#444';
+    const cls = 'kuvd-n' + (it.укр_участок ? ' jump' : '');
+    const tgt = it.укр_участок ? ` data-target="${esc(it.укр_участок)}"` : '';
+    const hay = [it.кувд, it.статус, it.обьект].join(' ').toLowerCase();
+    const tag = it.статус ? `<span class="tag">${esc(it.статус)}</span>` : '';
+    const warn = (it['⚠'] ? '<span class="warn">⚠</span>' : '') + (it.дубль_в_списке ? '<span class="warn">×2</span>' : '');
+    return `<div class="${cls}"${tgt} style="--st:${c}" data-hay="${esc(hay)}" title="${esc(it.обьект || '')}">${esc(it.кувд)}${tag}${warn}</div>`;
+  };
+
+  let html = '';
+  k.владельцы.forEach(o => {
+    const ob = o.обьектов_в_базе, s = o.сверка, d = s.разница;
+    const mark = d === 0 ? '<span style="color:#2ecc71">сходится</span>'
+      : d < 0 ? `<span style="color:#e8c547">не хватает ${-d}</span>`
+              : `<span style="color:#5bb8ff">на ${d} больше</span>`;
+    html += `<div class="kuvd-owner" data-owner="${esc(o.владелец.toLowerCase())}">${esc(o.владелец)} — ${o.номеров}</div>
+      <div class="kuvd-sub">в базе ${ob.участки} уч. + ${ob.здания} зд. · ожидается ${s.ожидается_кувд} · ${mark}</div>
+      <div class="kuvd-grid">${o.номера.map(chip).join('')}</div>`;
+  });
+  k.без_владельца.forEach(u => {
+    const nm = u.владелец.replace(/^без владельца\s*/i, '').replace(/^\(|\)$/g, '');   // «партия 1»
+    html += `<div class="kuvd-owner noname" data-owner="без владельца">Без владельца · ${esc(nm)} — ${u.номеров}</div>
+      <div class="kuvd-sub">владелец не был указан при отправке списка</div>
+      <div class="kuvd-grid">${u.номера.map(chip).join('')}</div>`;
+  });
+  document.getElementById('kuvd-body').innerHTML = html;
+  applyKuvdSearch();
+}
+
+function applyKuvdSearch() {
+  const q = document.getElementById('kuvd-search').value.trim().toLowerCase();
+  const words = q ? q.split(/\s+/) : [];
+  const alt = /[a-z\[\];'`,.{}:"<>~]/i.test(q) ? words.map(fixLayout) : null;
+  const hit = (hay, ws) => ws.every(w => hay.includes(w));
+  document.querySelectorAll('#kuvd-body .kuvd-owner').forEach(h => {
+    const sub = h.nextElementSibling, grid = sub.nextElementSibling;
+    const owner = h.dataset.owner;
+    let vis = 0;
+    grid.querySelectorAll('.kuvd-n').forEach(el => {
+      const hay = el.dataset.hay + ' ' + owner;
+      const ok = !q || hit(hay, words) || (alt && hit(hay, alt));
+      el.classList.toggle('nohit', !ok);
+      if (ok) vis++;
+    });
+    [h, sub, grid].forEach(el => el.style.display = vis ? '' : 'none');
+  });
+}
+
+async function showKuvd() {
+  document.getElementById('kuvd-modal').classList.add('open');
+  const body = document.getElementById('kuvd-body');
+  const k = await loadKuvd();
+  if (!k) { body.innerHTML = '<div class="info-empty">Не удалось загрузить kuvd.json</div>'; return; }
+  renderKuvd(k);
+}
+document.getElementById('kuvd-btn').addEventListener('click', showKuvd);
+document.getElementById('kuvd-close').addEventListener('click', () => document.getElementById('kuvd-modal').classList.remove('open'));
+document.getElementById('kuvd-modal').addEventListener('click', e => { if (e.target.id === 'kuvd-modal') e.target.classList.remove('open'); });
+document.getElementById('kuvd-search').addEventListener('input', applyKuvdSearch);
+document.getElementById('kuvd-dl').addEventListener('click', async () => {
+  const k = await loadKuvd();
+  if (!k) return;
+  const blob = new Blob([kuvdText(k)], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'kuvd-buhta.txt';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+});
+document.getElementById('kuvd-body').addEventListener('click', e => {
+  const el = e.target.closest('.kuvd-n.jump');
+  if (!el) return;
+  document.getElementById('kuvd-modal').classList.remove('open');
+  navigateToParcel(el.dataset.target);
 });
 
 // Пересчёт размера карты при повороте телефона / ресайзе
