@@ -403,7 +403,7 @@
     <div class="stats-head"><span>📋 ИНФО — адреса ФИАС Херсонской обл.</span><button id="info-close">×</button></div>
     <div class="info-note">
       🟢 есть документ: адрес сменён / право зарегистрировано в Росреестре ХО ·
-      🟡 приостановка · 🔴 отказ · ⚪ документа пока нет.
+      🟡 регистрация приостановлена · 🔴 отказ · ⚪ документа пока нет.
       Клик по строке — переход к участку на карте.
     </div>
     <div class="info-tools">
@@ -721,7 +721,8 @@ async function loadCouncilPolygons(code) {
 
 // Красный уголок-маркер на участках с присвоенным адресом РФ
 // Флажок по центру участка с адресом РФ: красный = адрес присвоен,
-// зелёный = уже прошла (пере)регистрация в Росреестре по Херсонской области (поле rr)
+// зелёный = прошла (пере)регистрация в Росреестре по Херсонской области (поле rr),
+// жёлтый = регистрация права приостановлена (dst='stop')
 const flagIcon = color => L.divIcon({
   html: '<div style="position:relative;width:14px;height:16px">'
       + `<div style="position:absolute;left:6px;top:0;width:1.5px;height:16px;background:${color.pole}"></div>`
@@ -731,6 +732,8 @@ const flagIcon = color => L.divIcon({
 });
 const rfCornerIcon = flagIcon({ pole: '#7a1010', flag: '#e23b3b' });
 const rfCornerIconGreen = flagIcon({ pole: '#0a5c2a', flag: '#2ecc71' });
+const rfCornerIconStop = flagIcon({ pole: '#7a5c10', flag: '#e8c547' });   // регистрация приостановлена
+const flagFor = d => d.dst === 'stop' ? rfCornerIconStop : (d.rr ? rfCornerIconGreen : rfCornerIcon);
 function addRfCorners(layer, council) {
   const grp = L.layerGroup().addTo(map);
   rfCornerGroups.push(grp);
@@ -773,8 +776,23 @@ function addRfCorners(layer, council) {
     }
     const pt = best || fallback;
     if (!pt) return;
-    L.marker([pt[1], pt[0]], { icon: d.rr ? rfCornerIconGreen : rfCornerIcon, interactive: false, keyboard: false }).addTo(grp);
+    L.marker([pt[1], pt[0]], { icon: flagFor(d), interactive: false, keyboard: false }).addTo(grp);
   });
+}
+
+// Приостановка / отказ Росреестра — плашка в попапе (поля dst, dwhy, dkuvd, ddate, duntil)
+function statusBlock(d) {
+  if (d.dst !== 'stop' && d.dst !== 'deny') return '';
+  const stop = d.dst === 'stop';
+  const c = stop ? '#e8c547' : '#e23b3b';
+  const head = stop
+    ? `🟡 Регистрация права приостановлена${d.duntil ? ` до ${d.duntil}` : ''}`
+    : `🔴 В регистрации права отказано`;
+  return `<div style="margin-top:4px;padding:5px 8px;border-left:3px solid ${c};background:rgba(255,255,255,.03)">
+    <div style="color:${c};font-weight:600">${head}</div>
+    ${d.dkuvd ? `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#aaa;margin-top:2px">${d.dkuvd}${COPY_BTN(d.dkuvd)}</div>` : ''}
+    ${d.dwhy ? `<div style="font-size:11px;color:#bbb;margin-top:3px;line-height:1.4">${d.dwhy}</div>` : ''}
+  </div>`;
 }
 
 function parcelStyle(f, council) {
@@ -872,7 +890,8 @@ function buildParcelPopup(cad, data, council) {
       ${data.cadrf ? `<div style="margin-top:4px"><span title="есть РФ-кадастр">🇷🇺</span> <b style="color:#aaa">кадастровый РФ:</b> <span style="font-family:'IBM Plex Mono',monospace;color:#e8c547">${data.cadrf}</span>${COPY_BTN(data.cadrf)}</div>` : ''}
       ${data.egrn ? `<div style="color:#4caf7d;font-weight:600;margin-top:2px">✓ оформлен ЕГРН${(typeof data.egrn==='string' && data.egrn && data.egrn!=='да') ? ` · ${data.egrn}` : ''}</div>` : ''}
       ${data.fias ? `<div style="margin-top:4px"><b style="color:#aaa">адрес РФ:</b> с. Бухта, ${data.fias}</div>` : ''}
-      ${data.rr ? `<div style="color:#2ecc71;font-weight:600;margin-top:2px">🟢 Зарегистрирован в Росреестре (Херсонская обл.)</div>` : ''}
+      ${data.rr && !data.dst ? `<div style="color:#2ecc71;font-weight:600;margin-top:2px">🟢 Зарегистрирован в Росреестре (Херсонская обл.)</div>` : ''}
+      ${statusBlock(data)}
       ${buildingsBlock(data)}
       ${data.post ? `<div style="color:#aaa;font-size:11px;margin-top:3px">постановление № ${data.post}</div>` : ''}
       ${otRu ? `<div style="color:#aaa;font-size:12px;margin-top:6px">${otRu}</div>` : ''}
@@ -924,7 +943,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.4';
+const BUILD_VERSION = '5.5';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1852,6 +1871,8 @@ function computeStats() {
     khAddr: ps.filter(p => p.fias).length,                                       // новый херсонский адрес
     rr: ps.filter(p => p.rr).length,                                             // перерегистрация в Росреестре ХО
     mfc: ps.filter(p => p.mfc).length,                                           // подано на регистрацию в МФЦ (ожидает)
+    stop: ps.filter(p => p.dst === 'stop').length,                               // регистрация права приостановлена
+    deny: ps.filter(p => p.dst === 'deny').length,                               // отказ
     housesTotal: houses.length,
     housesZapAddr: ps.reduce((a, p) => a + (((p.zaddr || '').match(/дом\s*\d/g)) || []).length, 0),
     housesZapCad: houses.filter(h => (h.cad || '').startsWith('96')).length,
@@ -1875,6 +1896,8 @@ function showStats() {
     + row('Присвоен адрес ФИАС ХО', s.khAddr)
     + row('Подано на регистрацию в МФЦ', s.mfc)
     + row('🟢 Адрес сменён в Росреестре (Херсонская обл.)', s.rr)
+    + row('🟡 Регистрация права приостановлена', s.stop)
+    + (s.deny ? row('🔴 В регистрации права отказано', s.deny) : '')
     + `<div class="stats-sec">Здания</div>`
     + row('Всего зданий', s.housesTotal)
     + row('Имели запорожский адрес', s.housesZapAddr)
@@ -1911,7 +1934,8 @@ function infoObjects() {
     const street = streetOf(p.fias), num = houseNo(p.fias);
     rows.push({ kind: 'земля', bld: false, street, num, addr: p.fias, o: p.o || '—',
       size: `${p.a} га · ${Math.round(p.a * 1e4)} м²`, rf: p.cadrf || '', uk: p.c,
-      target: p.c, st: statusOf(p), why: p.dwhy || '', post: p.post || '' });
+      target: p.c, st: statusOf(p), why: p.dwhy || '', post: p.post || '',
+      kuvd: p.dkuvd || '', until: p.duntil || '' });
     // часть литер в базе уже записана как «здание 12» — второй раз слово не добавляем
     (p.blds || []).forEach(b => rows.push({ kind: 'здание', bld: true, street, num, addr:
       (street ? `улица ${street}, ` : '') + (/^здание\s/i.test(b.lit) ? b.lit : `здание ${b.lit}`),
@@ -1951,7 +1975,11 @@ function renderInfo() {
     // ⚪ без документа: причина из pending, иначе — постановление ФИАС есть, но в Росреестр не прошло
     const why = r.why || (r.st !== 'none' ? '' : noteByCad.get(r.rf)
       || (r.post ? `постановление № ${r.post} — в Росреестре адрес ещё не сменён` : 'документов пока нет'));
-    const hay = [r.addr, r.o, r.rf, r.uk, why].join(' ').toLowerCase();
+    // у 🟡/🔴 сверху строки — срок и номер КУВД уведомления
+    const head = r.kuvd
+      ? `${r.st === 'stop' ? `Приостановлено${r.until ? ` до ${r.until}` : ''}` : 'Отказ'} · ${r.kuvd}`
+      : '';
+    const hay = [r.addr, r.o, r.rf, r.uk, r.kuvd, why].join(' ').toLowerCase();
     html += `<div class="info-row${r.bld ? ' bld' : ''}" style="--st:${ST_COLOR[r.st]}${r.target ? '' : ';cursor:default'}"
         data-target="${esc(r.target || '')}" data-hay="${esc(hay)}">
       <div class="info-addr" title="${esc(r.addr)}"><i class="dot"></i>${esc(shortAddr)}<span class="kind">${r.kind}</span></div>
@@ -1962,7 +1990,8 @@ function renderInfo() {
         ${r.uk ? `<div class="uk">${esc(r.uk)}</div>` : ''}
       </div>
       ${reg && reg.reg ? `<div class="info-reg">рег. права ${esc(reg.reg)}${reg.date ? ' · ' + esc(reg.date) : ''}${reg.right ? ' · ' + esc(reg.right) : ''}</div>` : ''}
-      ${why ? `<div class="info-why${r.st === 'none' ? ' dim' : ''}">${esc(why)}</div>` : ''}
+      ${head ? `<div class="info-why" style="font-weight:600">${esc(head)}</div>` : ''}
+      ${why ? `<div class="info-why dim">${esc(why)}</div>` : ''}
       ${r.note ? `<div class="info-why dim">${esc(r.note)}</div>` : ''}
     </div>`;
   });
