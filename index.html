@@ -766,6 +766,27 @@ const COPY_BTN = (txt) => `<button onclick="copyCad('${txt}',this,event)" title=
 // Массивы показываем все, включая «З.Берег» (вернули по просьбе)
 const znDisp = zn => zn || '';
 
+// Кадастры всех зданий участка одной строкой (для поиска)
+const bldCads = p => (p.blds || []).map(b => b.cad).filter(Boolean).join(' ') || (p.bcadrf || '');
+
+// Блок зданий: кадастр зелёный + пометка, если здание прошло регистрацию в Росреестре ХО
+function buildingsBlock(data) {
+  const list = data.blds || (data.building ? [{ lit: data.building, cad: data.bcadrf || '' }] : []);
+  if (!list.length) return '';
+  const rows = list.map(b => {
+    const green = !!b.rr;
+    const cadHtml = b.cad
+      ? `<div style="margin-top:1px"><span style="font-family:'IBM Plex Mono',monospace;color:${green ? '#2ecc71' : '#e8c547'}">${b.cad}</span>${COPY_BTN(b.cad)}${green ? ` <span style="color:#2ecc71;font-size:10px;font-weight:600">🟢 РР ХО</span>` : ''}</div>`
+      : '';
+    return `<div style="margin-top:3px">
+      <span style="color:${green ? '#2ecc71' : '#e8e8e8'};font-weight:600">${b.lit}</span>${b.area ? `<span style="color:#aaa"> · ${b.area}</span>` : ''}
+      ${cadHtml}</div>`;
+  }).join('');
+  const n = list.length;
+  return `<div style="margin-top:5px;padding:5px 8px;border:1px solid var(--border);border-radius:4px">
+    <b style="color:#aaa">🏠 ${n > 1 ? `Здания (${n})` : 'Здание'}:</b>${rows}</div>`;
+}
+
 function buildParcelPopup(cad, data, council) {
   const inBasket = basket.has(cad);
   const basketBtn = `<button onclick="basketToggle('${cad}')" style="margin-top:6px;padding:4px 10px;background:${inBasket?'#e05252':'var(--accent)'};color:#1a1a1a;border:none;border-radius:3px;cursor:pointer;font-family:inherit;font-size:11px;font-weight:600">${inBasket?'− убрать из корзины':'+ в корзину'}</button>`;
@@ -795,7 +816,7 @@ function buildParcelPopup(cad, data, council) {
       ${data.egrn ? `<div style="color:#4caf7d;font-weight:600;margin-top:2px">✓ оформлен ЕГРН${(typeof data.egrn==='string' && data.egrn && data.egrn!=='да') ? ` · ${data.egrn}` : ''}</div>` : ''}
       ${data.fias ? `<div style="margin-top:4px"><b style="color:#aaa">адрес РФ:</b> с. Бухта, ${data.fias}</div>` : ''}
       ${data.rr ? `<div style="color:#2ecc71;font-weight:600;margin-top:2px">🟢 Зарегистрирован в Росреестре (Херсонская обл.)</div>` : ''}
-      ${data.building ? `<div style="margin-top:5px;padding:5px 8px;border:1px solid var(--border);border-radius:4px"><b style="color:#aaa">🏠 Здание:</b> ${data.building}${data.bcadrf ? `<div style="margin-top:2px"><b style="color:#aaa">кадастр здания:</b> <span style="font-family:'IBM Plex Mono',monospace;color:#e8c547">${data.bcadrf}</span>${COPY_BTN(data.bcadrf)}</div>` : ''}</div>` : ''}
+      ${buildingsBlock(data)}
       ${data.post ? `<div style="color:#aaa;font-size:11px;margin-top:3px">постановление № ${data.post}</div>` : ''}
       ${otRu ? `<div style="color:#aaa;font-size:12px;margin-top:6px">${otRu}</div>` : ''}
     </div>`;
@@ -846,7 +867,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.1';
+const BUILD_VERSION = '5.2';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1577,7 +1598,7 @@ search.addEventListener('input', e => {
       for (const p of c.parcels) {
         const ua = p.c.replace(/:/g, '');
         const rf = (p.cadrf || '').replace(/:/g, '');
-        const brf = (p.bcadrf || '').replace(/:/g, '');
+        const brf = bldCads(p).replace(/:/g, '');
         if (ua.includes(qd) || rf.includes(qd) || brf.includes(qd)) {
           results.push({ type: 'parcel', p, council: c });
           if (results.length >= 50) break;
@@ -1607,7 +1628,7 @@ search.addEventListener('input', e => {
           const hay = [p.o, p.r, p.ad, p.fias, p.zn, p.building]
             .filter(Boolean).join(' ').toLowerCase();
           // кадастры матчим только длинными токенами (содержат ':' или длиннее 5 символов)
-          const cadHay = [p.cadrf, p.bcadrf, p.c].filter(Boolean).join(' ').toLowerCase();
+          const cadHay = [p.cadrf, bldCads(p), p.c].filter(Boolean).join(' ').toLowerCase();
           const hit = tokens.every(t => hay.includes(t) || ((t.includes(':') || t.length > 5) && cadHay.includes(t)));
           if (hit) {
             results.push({ type: 'parcel', p, council: c });
@@ -1764,9 +1785,8 @@ function computeStats() {
   const c = COUNCILS.find(c => c.code === '2320355400');
   const ps = (c && c.parcels) || [];
   const ub = (c && c.unbound) || []; // дома без привязки к укр. участку (Набережная 46 А/Б/В)
-  const nHouses = b => { const m = b.match(/стр\.\s*([^)]+)/); return m ? m[1].split(',').length : 1; };
-  const withB = ps.filter(p => p.building);
-  const housesBound = withB.reduce((a, p) => a + nHouses(p.building), 0);
+  const houses = ps.flatMap(p => p.blds || []).concat(ub); // все дома одним списком
+  const housesBound = houses.length - ub.length;
   return {
     total: ps.length,
     zapEgrn: ps.filter(p => p.egrn && (p.cadrf || '').startsWith('96')).length, // ЕГРН + запорожский кадастр
@@ -1775,15 +1795,15 @@ function computeStats() {
     khAddr: ps.filter(p => p.fias).length,                                       // новый херсонский адрес
     rr: ps.filter(p => p.rr).length,                                             // перерегистрация в Росреестре ХО
     mfc: ps.filter(p => p.mfc).length,                                           // подано на регистрацию в МФЦ (ожидает)
-    housesTotal: housesBound + ub.length,
+    housesTotal: houses.length,
     housesZapAddr: ps.reduce((a, p) => a + (((p.zaddr || '').match(/дом\s*\d/g)) || []).length, 0),
-    housesZapCad: ps.filter(p => (p.bcadrf || '').startsWith('96')).length + ub.filter(h => (h.bcadrf || '').startsWith('96')).length,
-    housesKhCad: ps.filter(p => (p.bcadrf || '').startsWith('94')).length + ub.filter(h => (h.bcadrf || '').startsWith('94')).length,
-    housesKhAddr: housesBound + ub.length,
-    // РР только по домам с СОБСТВЕННОЙ выпиской (brr у участка / rr у непривязанного дома),
-    // дом на перерегистрированном участке сам по себе не считается
-    housesRR: withB.filter(p => p.brr).reduce((a, p) => a + nHouses(p.building), 0) + ub.filter(h => h.rr).length,
-    housesMfc: withB.filter(p => p.bmfc).reduce((a, p) => a + nHouses(p.building), 0) + ub.filter(h => h.mfc).length
+    housesZapCad: houses.filter(h => (h.cad || '').startsWith('96')).length,
+    housesKhCad: houses.filter(h => (h.cad || '').startsWith('94')).length,
+    housesKhAddr: houses.length,
+    // РР только по домам с СОБСТВЕННОЙ выпиской о праве (rr у самого дома),
+    // регистрация участка на его дома не распространяется
+    housesRR: houses.filter(h => h.rr).length,
+    housesMfc: houses.filter(h => h.mfc).length
   };
 }
 function showStats() {
