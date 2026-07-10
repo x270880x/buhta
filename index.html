@@ -983,7 +983,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.10';
+const BUILD_VERSION = '5.11';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -2206,14 +2206,22 @@ document.getElementById('kuvd-close').addEventListener('click', () => document.g
 document.getElementById('kuvd-modal').addEventListener('click', e => { if (e.target.id === 'kuvd-modal') e.target.classList.remove('open'); });
 document.getElementById('kuvd-search').addEventListener('input', applyKuvdSearch);
 // Excel собирается в браузере из kuvd.json (SheetJS уже подключён) — файл не может устареть
+// KUVD_XLSX_ANON: в выгрузке ФИО заменяются на «Владелец N» (в интерфейсе имена остаются).
+// Поставить false, чтобы вернуть фамилии в Excel.
+const KUVD_XLSX_ANON = true;
+
 function kuvdWorkbook(k) {
+  // подписи владельцев для выгрузки: имя → «Владелец N» (индекс стабилен, листы сшиваются между собой)
+  const label = new Map();
+  k.владельцы.forEach((o, idx) => label.set(o.владелец, KUVD_XLSX_ANON ? `Владелец ${idx + 1}` : o.владелец));
+
   const rows = [];
   let i = 0;
   k.владельцы.concat(k.без_владельца).forEach(grp => {
     const noname = k.без_владельца.includes(grp);
     const owner = noname
       ? 'НЕ УКАЗАН · ' + grp.владелец.replace(/^без владельца\s*/i, '').replace(/^\(|\)$/g, '')
-      : grp.владелец;
+      : label.get(grp.владелец);
     grp.номера.forEach(it => {
       const notes = [];
       if (it.дубль_в_списке) notes.push('прислан дважды');
@@ -2232,7 +2240,7 @@ function kuvdWorkbook(k) {
   ws['!freeze'] = { xSplit: 0, ySplit: 1 };
 
   const sverka = k.владельцы.map(o => ({
-    'Владелец': o.владелец, 'Объектов': o.сверка.обьектов,
+    'Владелец': label.get(o.владелец), 'Объектов': o.сверка.обьектов,
     'С зап. кадастром (×1)': o.сверка.с_запорожским_кадастром,
     'Без кадастра РФ (×2)': o.сверка.без_кадастра_рф,
     'Ожидается КУВД': o.сверка.ожидается_кувд, 'Прислано': o.сверка.прислано,
@@ -2245,7 +2253,8 @@ function kuvdWorkbook(k) {
   const pr = k.проблемы;
   const probs = [
     ...pr.битые_номера.map(n => ({ 'Тип': 'битый номер', 'КУВД': n, 'Подробности': '6 цифр вместо 7 — вероятна опечатка' })),
-    ...pr.дубли.map(x => ({ 'Тип': 'дубль в списке', 'КУВД': x.кувд, 'Подробности': `${x.повторов} раза · ${x.владельцы.join(', ')}` })),
+    ...pr.дубли.map(x => ({ 'Тип': 'дубль в списке', 'КУВД': x.кувд,
+      'Подробности': `${x.повторов} раза · ${x.владельцы.map(o => label.get(o) || o).join(', ')}` })),
     ...pr.отказ_без_обьекта.map(n => ({ 'Тип': 'отказ без объекта', 'КУВД': n, 'Подробности': 'решения нет, к какому участку относится — неизвестно' })),
     ...pr.без_владельца.map(x => ({ 'Тип': 'без владельца', 'КУВД': '', 'Подробности': x })),
   ];
