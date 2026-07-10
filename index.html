@@ -943,7 +943,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.5';
+const BUILD_VERSION = '5.6';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1884,7 +1884,45 @@ function computeStats() {
     housesMfc: houses.filter(h => h.mfc).length
   };
 }
-function showStats() {
+// Заявления в Росреестр (kuvd.json). На объект подаётся 2 КУВД: кадастровый учёт + регистрация права.
+let KUVD_DATA = null;
+async function loadKuvd() {
+  if (KUVD_DATA === null) {
+    try { KUVD_DATA = await (await fetch('kuvd.json')).json(); }
+    catch (e) { KUVD_DATA = false; }
+  }
+  return KUVD_DATA;
+}
+function kuvdSection(k) {
+  if (!k) return '';
+  const row = (t, n) => `<div class="stats-row"><span>${t}</span><span class="n">${n}</span></div>`;
+  const all = k.владельцы.concat(k.без_владельца);
+  const items = all.flatMap(o => o.номера);
+  const byStatus = st => items.filter(i => i.статус === st).length;
+  const noStatus = items.filter(i => !i.статус).length;
+  const owners = k.владельцы.map(o => {
+    const c = o.сверка, d = c.разница;
+    const mark = d === 0 ? '<span style="color:#2ecc71">✓</span>'
+      : d < 0 ? `<span style="color:#e8c547">−${-d}</span>` : `<span style="color:#5bb8ff">+${d}</span>`;
+    return `<div class="stats-row"><span>${o.владелец}</span>
+      <span class="n">${o.номеров} / ${c.ожидается_кувд} ${mark}</span></div>`;
+  }).join('');
+  return `<div class="stats-sec">Заявления (КУВД)</div>`
+    + row('Всего номеров (уникальных)', k.итого.уникальных)
+    + row('Дублей в присланных списках', k.итого.дублей)
+    + row('Битых номеров', k.проблемы.битые_номера.length)
+    + row('Без указанного владельца', k.итого.без_владельца)
+    + row('🟢 Готово', byStatus('готово'))
+    + row('🟡 Приостановка', byStatus('приостановка'))
+    + row('🔴 Отказ', byStatus('отказ'))
+    + row('Статус не указан', noStatus)
+    + `<div class="stats-sec">КУВД по владельцам · прислано / ожидается</div>`
+    + `<div style="color:var(--muted);font-size:11px;margin:-2px 0 6px;line-height:1.4">
+        На каждый объект — два заявления: кадастровый учёт и регистрация права.</div>`
+    + owners;
+}
+
+async function showStats() {
   const s = computeStats();
   const row = (t, n) => `<div class="stats-row"><span>${t}</span><span class="n">${n}</span></div>`;
   document.getElementById('stats-body').innerHTML =
@@ -1907,6 +1945,12 @@ function showStats() {
     + row('Подано на регистрацию в МФЦ', s.housesMfc)
     + row('🟢 Адрес сменён в Росреестре (Херсонская обл.)', s.housesRR);
   document.getElementById('stats-modal').classList.add('open');
+  // kuvd.json подгружается лениво — дописываем раздел, когда приедет
+  const k = await loadKuvd();
+  const body = document.getElementById('stats-body');
+  if (k && !body.querySelector('.kuvd-sec')) {
+    body.insertAdjacentHTML('beforeend', `<div class="kuvd-sec">${kuvdSection(k)}</div>`);
+  }
 }
 document.getElementById('stats-btn').addEventListener('click', showStats);
 document.getElementById('stats-close').addEventListener('click', () => document.getElementById('stats-modal').classList.remove('open'));
