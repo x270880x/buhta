@@ -447,7 +447,7 @@
   <div class="stats-card">
     <div class="stats-head">
       <span>🔢 КУВД — заявления в Росреестр</span>
-      <button class="kuvd-dl" id="kuvd-dl">⬇ Скачать список</button>
+      <button class="kuvd-dl" id="kuvd-dl" title="Excel: все КУВД, сверка по владельцам, проблемы">⬇ Скачать Excel</button>
       <button id="kuvd-close">×</button>
     </div>
     <div class="info-note" id="kuvd-note"></div>
@@ -983,7 +983,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.8';
+const BUILD_VERSION = '5.9';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -2130,36 +2130,6 @@ document.getElementById('info-body').addEventListener('click', e => {
 // КУВД — полный список заявлений (kuvd.json): по владельцам + отдельно безымянные партии
 const KUVD_ST = { 'готово': '#2ecc71', 'приостановка': '#e8c547', 'отказ': '#e23b3b' };
 
-function kuvdText(k) {
-  const t = k.итого, pr = k.проблемы;
-  const L = ['КУВД — с. Бухта (Генический р-н, Херсонская обл.)',
-    `Уникальных: ${t.уникальных} · дублей в списках: ${t.дублей} · битых: ${pr.битые_номера.length} · без владельца: ${t.без_владельца}`,
-    k.правило_сверки || '',
-    'Статусы указаны только там, где они известны.', ''];
-  k.владельцы.forEach(o => {
-    const ob = o.обьектов_в_базе, s = o.сверка;
-    L.push(`=== ${o.владелец} — ${o.номеров} шт. (в базе ${ob.участки} уч. + ${ob.здания} зд.; `
-      + `ожидается ${s.ожидается_кувд}, расхождение ${s.разница > 0 ? '+' : ''}${s.разница}) ===`);
-    o.номера.forEach(it => {
-      let s = it.кувд;
-      if (it.статус) s += `  [${it.статус}]`;
-      if (it.обьект) s += `  ${it.обьект}`;
-      if (it.до) s += `  до ${it.до}`;
-      if (it.дубль_в_списке) s += '  (прислан дважды)';
-      if (it['⚠']) s += '  (!) короткий номер — вероятна опечатка';
-      L.push(s);
-    });
-    L.push('');
-  });
-  k.без_владельца.forEach(u => {
-    const nm = u.владелец.replace(/^без владельца\s*/i, '').replace(/^\(|\)$/g, '');
-    L.push(`=== БЕЗ ВЛАДЕЛЬЦА · ${nm} — ${u.номеров} шт. ===`);
-    u.номера.forEach(it => L.push(it.кувд));
-    L.push('');
-  });
-  return L.join('\n');
-}
-
 function renderKuvd(k) {
   const esc = s => escapeHtml(String(s || ''));
   const t = k.итого, pr = k.проблемы;
@@ -2169,7 +2139,8 @@ function renderKuvd(k) {
      битых номеров <b>${pr.битые_номера.length}</b> ·
      без владельца <b style="color:#e8c547">${t.без_владельца}</b>.
      Цвет полосы: 🟢 готово · 🟡 приостановка · 🔴 отказ · серый — статус не указан.
-     Строку с приостановкой можно кликнуть — откроется участок.<br>
+     Строку с приостановкой можно кликнуть — откроется участок.
+     Excel — три листа: все КУВД, сверка по владельцам, проблемы.<br>
      <span style="color:var(--muted)">Ожидается: объект уже с кадастром РФ (даже запорожским 96:…) → 1 заявление на смену адреса;
      объект без кадастра → 2 заявления, кадастровый учёт и регистрация права.</span>`;
 
@@ -2234,15 +2205,12 @@ document.getElementById('kuvd-btn').addEventListener('click', showKuvd);
 document.getElementById('kuvd-close').addEventListener('click', () => document.getElementById('kuvd-modal').classList.remove('open'));
 document.getElementById('kuvd-modal').addEventListener('click', e => { if (e.target.id === 'kuvd-modal') e.target.classList.remove('open'); });
 document.getElementById('kuvd-search').addEventListener('input', applyKuvdSearch);
-document.getElementById('kuvd-dl').addEventListener('click', async () => {
-  const k = await loadKuvd();
-  if (!k) return;
-  const blob = new Blob([kuvdText(k)], { type: 'text/plain;charset=utf-8' });
+// kuvd.xlsx собирается скриптом tools/make_kuvd_xlsx.py из kuvd.json — пересобрать после правки json
+document.getElementById('kuvd-dl').addEventListener('click', () => {
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'kuvd-buhta.txt';
+  a.href = 'kuvd.xlsx?v=' + BUILD_VERSION;   // обход кэша Pages
+  a.download = 'kuvd-buhta.xlsx';
   a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 });
 document.getElementById('kuvd-body').addEventListener('click', e => {
   const el = e.target.closest('.kuvd-n.jump');
