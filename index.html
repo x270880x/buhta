@@ -189,28 +189,72 @@
   .leaflet-popup-content .pstats { margin-top: 4px; color: var(--muted); font-size: 11px; font-family: 'IBM Plex Mono', monospace; }
 
   /* Статистика (кнопка в шапке + модалка) */
-  #stats-btn, #reg-btn {
+  #stats-btn, #info-btn {
     background: var(--surface2); color: var(--accent); border: 1px solid var(--accent);
     border-radius: 4px; padding: 6px 12px; cursor: pointer;
     font-family: inherit; font-size: 12px; font-weight: 600; align-self: center;
   }
-  #stats-btn:hover, #reg-btn:hover { background: var(--accent); color: #1a1a1a; }
-  #stats-modal, #reg-modal {
+  #stats-btn:hover, #info-btn:hover { background: var(--accent); color: #1a1a1a; }
+  #stats-modal, #info-modal {
     position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,.55);
     display: none; align-items: center; justify-content: center;
   }
-  #stats-modal.open, #reg-modal.open { display: flex; }
-  #reg-modal .stats-card { width: min(660px, 94vw); }
-  .reg-owner { color: var(--accent); font-weight: 700; font-size: 13px; margin: 14px 0 6px; letter-spacing: .5px; }
-  .reg-owner:first-child { margin-top: 4px; }
-  .reg-item { padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
-  .reg-item:last-child { border-bottom: none; }
-  .reg-obj { color: #e8e8e8; }
-  .reg-obj .kind { color: var(--muted); font-size: 11px; margin-left: 6px; }
-  .reg-num { font-family: 'IBM Plex Mono', monospace; color: #5bb8ff; font-size: 12px; margin-top: 2px; word-break: break-all; }
-  .reg-meta { color: var(--muted); font-size: 11px; margin-top: 1px; }
-  .reg-note { color: var(--muted); font-size: 11px; line-height: 1.45; margin-bottom: 6px; }
-  .reg-pending { color: #e8c547; font-weight: 700; font-size: 12px; letter-spacing: .5px; margin: 16px 0 6px; }
+  #stats-modal.open, #info-modal.open { display: flex; }
+  #info-modal .stats-card { width: min(940px, 96vw); }
+
+  /* ИНФО: реестр объектов с адресом ФИАС ХО */
+  .info-note { color: var(--muted); font-size: 11px; line-height: 1.45; margin-bottom: 8px; }
+  .info-tools { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+  .info-tools input {
+    flex: 1 1 200px; min-width: 160px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 4px; color: #e8e8e8; font-family: inherit; font-size: 12px; padding: 6px 8px;
+  }
+  .info-tools input:focus { outline: none; border-color: var(--accent); }
+  .chip {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+    border-radius: 20px; padding: 5px 10px; font-size: 11px; font-family: inherit;
+    cursor: pointer; white-space: nowrap;
+  }
+  .chip:hover { border-color: var(--muted); color: #e8e8e8; }
+  .chip.on { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+  .chip .n { font-family: 'IBM Plex Mono', monospace; margin-left: 4px; opacity: .8; }
+
+  .info-street { color: var(--accent); font-weight: 700; font-size: 12px; letter-spacing: 1px;
+    text-transform: uppercase; margin: 14px 0 4px; }
+  .info-street:first-child { margin-top: 2px; }
+  .info-row {
+    display: grid; grid-template-columns: minmax(0,1.4fr) 138px minmax(0,150px) minmax(0,1.2fr);
+    gap: 6px 12px; align-items: start;
+    padding: 7px 8px 7px 10px; border-bottom: 1px solid var(--border);
+    border-left: 3px solid var(--st); font-size: 12.5px; cursor: pointer;
+  }
+  .info-row:hover { background: var(--surface2); }
+  .info-row.bld { padding-left: 26px; background: rgba(255,255,255,.012); }
+  .info-row.nohit { display: none; }
+  .info-addr { color: #e8e8e8; }
+  .info-row.bld .info-addr { color: #cfcfcf; }
+  .info-addr .dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--st); margin-right: 7px; vertical-align: baseline;
+  }
+  .info-addr .kind {
+    color: var(--muted); font-size: 10px; margin-left: 7px; white-space: nowrap;
+    border: 1px solid var(--border); border-radius: 10px; padding: 1px 6px;
+  }
+  .info-size { font-family: 'IBM Plex Mono', monospace; color: #aaa; font-size: 11.5px; white-space: nowrap; }
+  .info-owner { color: #bfbfbf; font-size: 11.5px; }
+  .info-cads { font-family: 'IBM Plex Mono', monospace; font-size: 11px; line-height: 1.5; }
+  .info-cads .rf { color: var(--st); word-break: break-all; }
+  .info-cads .uk { color: #6f6f6f; word-break: break-all; }
+  .info-why { grid-column: 1 / -1; font-size: 11px; color: var(--st); margin-top: 2px; line-height: 1.4; }
+  .info-why.dim { color: var(--muted); }
+  .info-reg { grid-column: 1 / -1; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px;
+    color: #5bb8ff; margin-top: 2px; word-break: break-all; }
+  .info-empty { color: var(--muted); font-size: 12px; padding: 20px 0; text-align: center; }
+  @media (max-width: 700px) {
+    .info-row { grid-template-columns: 1fr; gap: 2px; }
+    .info-row.bld { padding-left: 18px; }
+  }
   .stats-card {
     background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
     width: min(460px, 92vw); max-height: 86vh; overflow-y: auto;
@@ -345,7 +389,7 @@
     <div><div class="v" id="hstat-filtered">—</div><div class="l">отфильтр. участков</div></div>
     <div><div class="v" id="hstat-filtered-area">—</div><div class="l">отфильтр. га</div></div>
     <button id="stats-btn" title="Статистика по участкам и домам">📊 Статистика</button>
-    <button id="reg-btn" title="Номера регистрации права в Росреестре">📄 Регистрации</button>
+    <button id="info-btn" title="Все адреса ФИАС ХО: владельцы, размеры, кадастры, статус документов">📋 ИНФО</button>
   </div>
 </header>
 <div id="stats-modal">
@@ -354,10 +398,23 @@
     <div id="stats-body"></div>
   </div>
 </div>
-<div id="reg-modal">
+<div id="info-modal">
   <div class="stats-card">
-    <div class="stats-head"><span>📄 Номера регистрации права</span><button id="reg-close">×</button></div>
-    <div id="reg-body"></div>
+    <div class="stats-head"><span>📋 ИНФО — адреса ФИАС Херсонской обл.</span><button id="info-close">×</button></div>
+    <div class="info-note">
+      🟢 есть документ: адрес сменён / право зарегистрировано в Росреестре ХО ·
+      🟡 приостановка · 🔴 отказ · ⚪ документа пока нет.
+      Клик по строке — переход к участку на карте.
+    </div>
+    <div class="info-tools">
+      <input id="info-search" type="text" placeholder="фильтр: адрес, владелец, кадастр…" autocomplete="off">
+      <button class="chip on" data-f="all">Все<span class="n"></span></button>
+      <button class="chip" data-f="ok">🟢 Готово<span class="n"></span></button>
+      <button class="chip" data-f="stop">🟡 Приостановка<span class="n"></span></button>
+      <button class="chip" data-f="deny">🔴 Отказ<span class="n"></span></button>
+      <button class="chip" data-f="none">⚪ Без документа<span class="n"></span></button>
+    </div>
+    <div id="info-body"></div>
   </div>
 </div>
 
@@ -867,7 +924,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.2';
+const BUILD_VERSION = '5.3';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1832,42 +1889,128 @@ document.getElementById('stats-btn').addEventListener('click', showStats);
 document.getElementById('stats-close').addEventListener('click', () => document.getElementById('stats-modal').classList.remove('open'));
 document.getElementById('stats-modal').addEventListener('click', e => { if (e.target.id === 'stats-modal') e.target.classList.remove('open'); });
 
-// Реестр номеров госрегистрации права (registrations.json), сгруппирован по владельцу
-let REG_DATA = null;
-async function showRegistrations() {
-  const body = document.getElementById('reg-body');
-  document.getElementById('reg-modal').classList.add('open');
-  if (!REG_DATA) {
-    body.innerHTML = '<div class="reg-note">Загрузка…</div>';
-    try {
-      const r = await fetch('registrations.json');
-      REG_DATA = await r.json();
-    } catch (e) { body.innerHTML = '<div class="reg-note">Не удалось загрузить registrations.json</div>'; return; }
-  }
-  const esc = s => escapeHtml(String(s || ''));
-  let html = `<div class="reg-note">${esc(REG_DATA.note)}</div>`;
-  REG_DATA.owners.forEach(o => {
-    html += `<div class="reg-owner">${esc(o.full)}</div>`;
-    o.items.forEach(it => {
-      html += `<div class="reg-item">
-        <div class="reg-obj">${esc(it.obj)}<span class="kind">${esc(it.kind)}</span></div>
-        ${it.reg ? `<div class="reg-num">${esc(it.reg)}${COPY_BTN(it.reg)}</div>` : ''}
-        <div class="reg-meta">кадастр ${esc(it.cad)}${it.date ? ' · ' + esc(it.date) : ''}${it.right ? ' · ' + esc(it.right) : ''}</div>
-      </div>`;
-    });
+// ИНФО — реестр всех объектов с адресом ФИАС ХО (участки + дома).
+// Статус: dst='deny' → 🔴 отказ, dst='stop' → 🟡 приостановка, rr → 🟢 документ есть, иначе ⚪.
+// Причина отказа/приостановки — в поле dwhy; для ⚪ подставляется note из registrations.json → pending.
+const ST_COLOR = { ok: '#2ecc71', stop: '#e8c547', deny: '#e23b3b', none: '#7a7a7a' };
+let REG_DATA = null, INFO_ROWS = null, INFO_FILTER = 'all';
+
+const streetOf = f => ((f || '').match(/улица\s+([^,]+)/i) || [, ''])[1].trim();
+const houseNo = f => {                       // [номер, подномер] для сортировки внутри улицы
+  const m = (f || '').replace(/улица\s+[^,]+/i, '').match(/(\d+)(?:\/(\d+))?/);
+  return m ? [+m[1], +(m[2] || 0)] : [1e9, 0];
+};
+const statusOf = o => o.dst === 'deny' ? 'deny' : o.dst === 'stop' ? 'stop' : (o.rr ? 'ok' : 'none');
+
+function infoObjects() {
+  const c = COUNCILS.find(x => x.code === '2320355400');
+  const ps = (c && c.parcels) || [];
+  const ub = (c && c.unbound) || [];   // дома без привязки к укр. участку
+  const rows = [];
+  ps.filter(p => p.fias).forEach(p => {
+    const street = streetOf(p.fias), num = houseNo(p.fias);
+    rows.push({ kind: 'земля', bld: false, street, num, addr: p.fias, o: p.o || '—',
+      size: `${p.a} га · ${Math.round(p.a * 1e4)} м²`, rf: p.cadrf || '', uk: p.c,
+      target: p.c, st: statusOf(p), why: p.dwhy || '', post: p.post || '' });
+    // часть литер в базе уже записана как «дом 12» — второй раз слово «здание» не добавляем
+    (p.blds || []).forEach(b => rows.push({ kind: 'дом', bld: true, street, num, addr:
+      (street ? `улица ${street}, ` : '') + (/^(дом|здание)\s/i.test(b.lit) ? b.lit : `здание ${b.lit}`),
+      o: p.o || '—', size: b.area || '', rf: b.cad || '', uk: '', target: p.c, st: statusOf(b), why: b.dwhy || '' }));
   });
-  if (REG_DATA.pending && REG_DATA.pending.length) {
-    html += `<div class="reg-pending">Право ещё не зарегистрировано (${REG_DATA.pending.length})</div>`;
-    REG_DATA.pending.forEach(p => {
-      html += `<div class="reg-item"><div class="reg-obj">${esc(p.obj)}</div>
-        <div class="reg-meta">кадастр ${esc(p.cad)} · ${esc(p.note)}</div></div>`;
-    });
-  }
-  body.innerHTML = html;
+  ub.forEach(u => rows.push({ kind: 'дом', bld: true, street: streetOf(u.fias), num: houseNo(u.fias),
+    addr: u.fias || u.bname || '', o: u.o || '—', size: u.area || '', rf: u.cad || '', uk: '',
+    target: null, st: statusOf(u), why: u.dwhy || '', note: u.note || 'на карте не показан: укр. участок не определён' }));
+  rows.sort((a, b) => a.street.localeCompare(b.street, 'ru')
+    || a.num[0] - b.num[0] || a.num[1] - b.num[1] || a.bld - b.bld);
+  return rows;
 }
-document.getElementById('reg-btn').addEventListener('click', showRegistrations);
-document.getElementById('reg-close').addEventListener('click', () => document.getElementById('reg-modal').classList.remove('open'));
-document.getElementById('reg-modal').addEventListener('click', e => { if (e.target.id === 'reg-modal') e.target.classList.remove('open'); });
+
+function renderInfo() {
+  const esc = s => escapeHtml(String(s || ''));
+  const regByCad = new Map(), noteByCad = new Map();
+  if (REG_DATA) {
+    (REG_DATA.owners || []).forEach(o => (o.items || []).forEach(it => it.cad && regByCad.set(it.cad, it)));
+    (REG_DATA.pending || []).forEach(p => p.cad && noteByCad.set(p.cad, p.note));
+  }
+  const counts = { all: INFO_ROWS.length, ok: 0, stop: 0, deny: 0, none: 0 };
+  INFO_ROWS.forEach(r => counts[r.st]++);
+  document.querySelectorAll('#info-modal .chip').forEach(ch => {
+    ch.querySelector('.n').textContent = counts[ch.dataset.f];
+    ch.classList.toggle('on', ch.dataset.f === INFO_FILTER);
+  });
+
+  const shown = INFO_ROWS.filter(r => INFO_FILTER === 'all' || r.st === INFO_FILTER);
+  if (!shown.length) { document.getElementById('info-body').innerHTML = '<div class="info-empty">Нет объектов с таким статусом</div>'; return; }
+
+  let html = '', street = null;
+  shown.forEach(r => {
+    if (r.street !== street) { street = r.street; html += `<div class="info-street">улица ${esc(street)}</div>`; }
+    // улица уже в заголовке группы — в строке показываем только «хвост» адреса
+    const shortAddr = r.addr.replace(/^улица\s+[^,]+,\s*/i, '');
+    const reg = regByCad.get(r.rf);
+    // ⚪ без документа: причина из pending, иначе — постановление ФИАС есть, но в Росреестр не прошло
+    const why = r.why || (r.st !== 'none' ? '' : noteByCad.get(r.rf)
+      || (r.post ? `постановление № ${r.post} — в Росреестре адрес ещё не сменён` : 'документов пока нет'));
+    const hay = [r.addr, r.o, r.rf, r.uk, why].join(' ').toLowerCase();
+    html += `<div class="info-row${r.bld ? ' bld' : ''}" style="--st:${ST_COLOR[r.st]}${r.target ? '' : ';cursor:default'}"
+        data-target="${esc(r.target || '')}" data-hay="${esc(hay)}">
+      <div class="info-addr" title="${esc(r.addr)}"><i class="dot"></i>${esc(shortAddr)}<span class="kind">${r.kind}</span></div>
+      <div class="info-size">${esc(r.size)}</div>
+      <div class="info-owner">${esc(r.o)}</div>
+      <div class="info-cads">
+        ${r.rf ? `<div class="rf">${esc(r.rf)}${COPY_BTN(r.rf)}</div>` : '<div class="uk">кадастр РФ не присвоен</div>'}
+        ${r.uk ? `<div class="uk">${esc(r.uk)}</div>` : ''}
+      </div>
+      ${reg && reg.reg ? `<div class="info-reg">рег. права ${esc(reg.reg)}${reg.date ? ' · ' + esc(reg.date) : ''}${reg.right ? ' · ' + esc(reg.right) : ''}</div>` : ''}
+      ${why ? `<div class="info-why${r.st === 'none' ? ' dim' : ''}">${esc(why)}</div>` : ''}
+      ${r.note ? `<div class="info-why dim">${esc(r.note)}</div>` : ''}
+    </div>`;
+  });
+  document.getElementById('info-body').innerHTML = html;
+  applyInfoSearch();
+}
+
+function applyInfoSearch() {
+  const q = document.getElementById('info-search').value.trim().toLowerCase();
+  // слова ищем по «И»: «набережная 49» найдёт и участок, и его дома
+  const words = q ? q.split(/\s+/) : [];
+  const alt = /[a-z\[\];'`,.{}:"<>~]/i.test(q) ? words.map(fixLayout) : null;   // неправильная раскладка
+  const hit = (hay, ws) => ws.every(w => hay.includes(w));
+  document.querySelectorAll('#info-modal .info-row').forEach(el => {
+    const hay = el.dataset.hay;
+    el.classList.toggle('nohit', !!q && !hit(hay, words) && !(alt && hit(hay, alt)));
+  });
+  document.querySelectorAll('#info-modal .info-street').forEach(h => {
+    let n = h.nextElementSibling, vis = false;
+    while (n && n.classList.contains('info-row')) { if (!n.classList.contains('nohit')) vis = true; n = n.nextElementSibling; }
+    h.style.display = vis ? '' : 'none';
+  });
+}
+
+async function showInfo() {
+  document.getElementById('info-modal').classList.add('open');
+  const body = document.getElementById('info-body');
+  if (!REG_DATA) {
+    body.innerHTML = '<div class="info-empty">Загрузка…</div>';
+    try { REG_DATA = await (await fetch('registrations.json')).json(); }
+    catch (e) { REG_DATA = { owners: [], pending: [] }; }   // без номеров регистрации список всё равно строим
+  }
+  INFO_ROWS = infoObjects();
+  renderInfo();
+}
+document.getElementById('info-btn').addEventListener('click', showInfo);
+document.getElementById('info-close').addEventListener('click', () => document.getElementById('info-modal').classList.remove('open'));
+document.getElementById('info-modal').addEventListener('click', e => { if (e.target.id === 'info-modal') e.target.classList.remove('open'); });
+document.getElementById('info-search').addEventListener('input', applyInfoSearch);
+document.querySelectorAll('#info-modal .chip').forEach(ch =>
+  ch.addEventListener('click', () => { INFO_FILTER = ch.dataset.f; renderInfo(); }));
+document.getElementById('info-body').addEventListener('click', e => {
+  if (e.target.closest('button')) return;                   // копирование кадастра — не переход
+  const row = e.target.closest('.info-row');
+  if (!row || !row.dataset.target) return;
+  document.getElementById('info-modal').classList.remove('open');
+  navigateToParcel(row.dataset.target);
+});
 
 // Пересчёт размера карты при повороте телефона / ресайзе
 let _resizeT;
