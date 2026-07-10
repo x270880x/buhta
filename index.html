@@ -388,7 +388,7 @@
     <div><div class="v" id="hstat-councils">0</div><div class="l">сельсоветов</div></div>
     <div><div class="v" id="hstat-filtered">—</div><div class="l">отфильтр. участков</div></div>
     <div><div class="v" id="hstat-filtered-area">—</div><div class="l">отфильтр. га</div></div>
-    <button id="stats-btn" title="Статистика по участкам и домам">📊 Статистика</button>
+    <button id="stats-btn" title="Статистика по участкам и зданиям">📊 Статистика</button>
     <button id="info-btn" title="Все адреса ФИАС ХО: владельцы, размеры, кадастры, статус документов">📋 ИНФО</button>
   </div>
 </header>
@@ -924,7 +924,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.3';
+const BUILD_VERSION = '5.4';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1875,8 +1875,8 @@ function showStats() {
     + row('Присвоен адрес ФИАС ХО', s.khAddr)
     + row('Подано на регистрацию в МФЦ', s.mfc)
     + row('🟢 Адрес сменён в Росреестре (Херсонская обл.)', s.rr)
-    + `<div class="stats-sec">Дома</div>`
-    + row('Всего домов', s.housesTotal)
+    + `<div class="stats-sec">Здания</div>`
+    + row('Всего зданий', s.housesTotal)
     + row('Имели запорожский адрес', s.housesZapAddr)
     + row('С запорожским кадастром (96:…)', s.housesZapCad)
     + row('Уже имеют херсонский кадастр (94:…)', s.housesKhCad)
@@ -1912,12 +1912,12 @@ function infoObjects() {
     rows.push({ kind: 'земля', bld: false, street, num, addr: p.fias, o: p.o || '—',
       size: `${p.a} га · ${Math.round(p.a * 1e4)} м²`, rf: p.cadrf || '', uk: p.c,
       target: p.c, st: statusOf(p), why: p.dwhy || '', post: p.post || '' });
-    // часть литер в базе уже записана как «дом 12» — второй раз слово «здание» не добавляем
-    (p.blds || []).forEach(b => rows.push({ kind: 'дом', bld: true, street, num, addr:
-      (street ? `улица ${street}, ` : '') + (/^(дом|здание)\s/i.test(b.lit) ? b.lit : `здание ${b.lit}`),
+    // часть литер в базе уже записана как «здание 12» — второй раз слово не добавляем
+    (p.blds || []).forEach(b => rows.push({ kind: 'здание', bld: true, street, num, addr:
+      (street ? `улица ${street}, ` : '') + (/^здание\s/i.test(b.lit) ? b.lit : `здание ${b.lit}`),
       o: p.o || '—', size: b.area || '', rf: b.cad || '', uk: '', target: p.c, st: statusOf(b), why: b.dwhy || '' }));
   });
-  ub.forEach(u => rows.push({ kind: 'дом', bld: true, street: streetOf(u.fias), num: houseNo(u.fias),
+  ub.forEach(u => rows.push({ kind: 'здание', bld: true, street: streetOf(u.fias), num: houseNo(u.fias),
     addr: u.fias || u.bname || '', o: u.o || '—', size: u.area || '', rf: u.cad || '', uk: '',
     target: null, st: statusOf(u), why: u.dwhy || '', note: u.note || 'на карте не показан: укр. участок не определён' }));
   rows.sort((a, b) => a.street.localeCompare(b.street, 'ru')
