@@ -597,7 +597,7 @@ async function ensureCouncilParcels(council) {
   if (council._loading) return council._loading;
   council._loading = (async () => {
     try {
-      const resp = await fetch(`councils/${council.code}.json`);
+      const resp = await fetch(`councils/${council.code}.json?v=${BUILD_VERSION}`);
       if (!resp.ok) { council.parcels = []; return []; }
       const data = await resp.json();
       council.parcels = data.parcels || [];
@@ -696,7 +696,7 @@ async function loadCouncilPolygons(code) {
   // Ensure council data is loaded for popup info
   await ensureCouncilParcels(council);
   try {
-    const resp = await fetch(`parcels/${code}.geojson`);
+    const resp = await fetch(`parcels/${code}.geojson?v=${BUILD_VERSION}`);
     if (!resp.ok) return null;
     const fc = await resp.json();
     const layer = L.geoJSON(fc, {
@@ -983,7 +983,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.9';
+const BUILD_VERSION = '5.10';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1928,7 +1928,7 @@ function computeStats() {
 let KUVD_DATA = null;
 async function loadKuvd() {
   if (KUVD_DATA === null) {
-    try { KUVD_DATA = await (await fetch('kuvd.json')).json(); }
+    try { KUVD_DATA = await (await fetch(`kuvd.json?v=${BUILD_VERSION}`)).json(); }
     catch (e) { KUVD_DATA = false; }
   }
   return KUVD_DATA;
@@ -2107,7 +2107,7 @@ async function showInfo() {
   const body = document.getElementById('info-body');
   if (!REG_DATA) {
     body.innerHTML = '<div class="info-empty">Загрузка…</div>';
-    try { REG_DATA = await (await fetch('registrations.json')).json(); }
+    try { REG_DATA = await (await fetch(`registrations.json?v=${BUILD_VERSION}`)).json(); }
     catch (e) { REG_DATA = { owners: [], pending: [] }; }   // без номеров регистрации список всё равно строим
   }
   INFO_ROWS = infoObjects();
@@ -2205,12 +2205,63 @@ document.getElementById('kuvd-btn').addEventListener('click', showKuvd);
 document.getElementById('kuvd-close').addEventListener('click', () => document.getElementById('kuvd-modal').classList.remove('open'));
 document.getElementById('kuvd-modal').addEventListener('click', e => { if (e.target.id === 'kuvd-modal') e.target.classList.remove('open'); });
 document.getElementById('kuvd-search').addEventListener('input', applyKuvdSearch);
-// kuvd.xlsx собирается скриптом tools/make_kuvd_xlsx.py из kuvd.json — пересобрать после правки json
-document.getElementById('kuvd-dl').addEventListener('click', () => {
-  const a = document.createElement('a');
-  a.href = 'kuvd.xlsx?v=' + BUILD_VERSION;   // обход кэша Pages
-  a.download = 'kuvd-buhta.xlsx';
-  a.click();
+// Excel собирается в браузере из kuvd.json (SheetJS уже подключён) — файл не может устареть
+function kuvdWorkbook(k) {
+  const rows = [];
+  let i = 0;
+  k.владельцы.concat(k.без_владельца).forEach(grp => {
+    const noname = k.без_владельца.includes(grp);
+    const owner = noname
+      ? 'НЕ УКАЗАН · ' + grp.владелец.replace(/^без владельца\s*/i, '').replace(/^\(|\)$/g, '')
+      : grp.владелец;
+    grp.номера.forEach(it => {
+      const notes = [];
+      if (it.дубль_в_списке) notes.push('прислан дважды');
+      if (it['⚠']) notes.push(it['⚠']);
+      rows.push({
+        '№': ++i, 'КУВД': it.кувд, 'Владелец': owner, 'Статус': it.статус || '',
+        'Объект': it.обьект || '', 'Укр. участок': it.укр_участок || '',
+        'Кадастр РФ': it.кадастр_рф || '', 'Приостановлено до': it.до || '',
+        'Примечание': notes.join('; '),
+      });
+    });
+  });
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [{ wch: 5 }, { wch: 23 }, { wch: 32 }, { wch: 14 }, { wch: 42 }, { wch: 24 }, { wch: 20 }, { wch: 18 }, { wch: 46 }];
+  ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length, c: 8 } }) };
+  ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+
+  const sverka = k.владельцы.map(o => ({
+    'Владелец': o.владелец, 'Объектов': o.сверка.обьектов,
+    'С зап. кадастром (×1)': o.сверка.с_запорожским_кадастром,
+    'Без кадастра РФ (×2)': o.сверка.без_кадастра_рф,
+    'Ожидается КУВД': o.сверка.ожидается_кувд, 'Прислано': o.сверка.прислано,
+    'Расхождение': o.сверка.разница,
+  }));
+  sverka.push({}, { 'Владелец': 'Правило:', 'Объектов': k.правило_сверки });
+  const ws2 = XLSX.utils.json_to_sheet(sverka);
+  ws2['!cols'] = [{ wch: 32 }, { wch: 12 }, { wch: 20 }, { wch: 20 }, { wch: 16 }, { wch: 12 }, { wch: 14 }];
+
+  const pr = k.проблемы;
+  const probs = [
+    ...pr.битые_номера.map(n => ({ 'Тип': 'битый номер', 'КУВД': n, 'Подробности': '6 цифр вместо 7 — вероятна опечатка' })),
+    ...pr.дубли.map(x => ({ 'Тип': 'дубль в списке', 'КУВД': x.кувд, 'Подробности': `${x.повторов} раза · ${x.владельцы.join(', ')}` })),
+    ...pr.отказ_без_обьекта.map(n => ({ 'Тип': 'отказ без объекта', 'КУВД': n, 'Подробности': 'решения нет, к какому участку относится — неизвестно' })),
+    ...pr.без_владельца.map(x => ({ 'Тип': 'без владельца', 'КУВД': '', 'Подробности': x })),
+  ];
+  const ws3 = XLSX.utils.json_to_sheet(probs);
+  ws3['!cols'] = [{ wch: 20 }, { wch: 23 }, { wch: 60 }];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Все КУВД');
+  XLSX.utils.book_append_sheet(wb, ws2, 'Сверка');
+  XLSX.utils.book_append_sheet(wb, ws3, 'Проблемы');
+  return wb;
+}
+document.getElementById('kuvd-dl').addEventListener('click', async () => {
+  const k = await loadKuvd();
+  if (!k) return;
+  XLSX.writeFile(kuvdWorkbook(k), 'kuvd-buhta.xlsx');
 });
 document.getElementById('kuvd-body').addEventListener('click', e => {
   const el = e.target.closest('.kuvd-n.jump');
