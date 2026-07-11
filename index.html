@@ -998,7 +998,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.24';
+const BUILD_VERSION = '5.25';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1998,14 +1998,28 @@ function kh94Objects() {
   return out;
 }
 
-function kh94Block(list) {
+// Участки/здания, у которых poле статуса совпадает — для раскрывающихся строк статистики.
+// pred получает участок; чтобы попали и здания/unbound, передаётся отдельный bPred.
+function statObjects(pred) {
+  const c = COUNCILS.find(x => x.code === '2320355400');
+  const ps = (c && c.parcels) || [];
+  return ps.filter(pred).map(p => ({
+    cad: p.cadrf || '', kind: 'участок', addr: p.fias || '', o: p.o || '',
+    target: p.c, dst: p.dst, rr: p.rr
+  }));
+}
+
+function objBlock(list, emptyMsg) {
   const esc = s => escapeHtml(String(s || ''));
-  if (!list.length) return '<div class="stats-sub"><div class="empty">Пока нет объектов с кадастром 94:…</div></div>';
+  if (!list.length) return `<div class="stats-sub"><div class="empty">${esc(emptyMsg || 'Пусто')}</div></div>`;
   const items = list.map(o => {
     const st = o.dst === 'stop' ? ST_COLOR.stop : o.dst === 'deny' ? ST_COLOR.deny : (o.rr ? ST_COLOR.ok : '#7a7a7a');
     const tgt = o.target ? ` data-target="${esc(o.target)}"` : '';
+    const cadHtml = o.cad
+      ? `<span class="cad">${esc(o.cad)}</span>${COPY_BTN(o.cad)}`
+      : `<span class="cad" style="color:#7a7a7a">кад. РФ не присвоен</span>`;
     return `<div class="kh-item" style="--st:${st}"${tgt}>
-      <span class="cad">${esc(o.cad)}</span>${COPY_BTN(o.cad)}
+      ${cadHtml}
       <span class="meta">${esc(o.kind)}${o.addr ? ' · ' + esc(o.addr) : ''}${o.o ? ' · ' + esc(o.o) : ''}</span>
     </div>`;
   }).join('');
@@ -2014,21 +2028,23 @@ function kh94Block(list) {
 
 async function showStats() {
   const s = computeStats();
-  const kh = kh94Objects();
   const row = (t, n) => `<div class="stats-row"><span>${t}</span><span class="n">${n}</span></div>`;
-  // кликабельная строка: раскрывает список кадастров 94:…
-  const rowKh = (t, n) => `<div class="stats-row link" data-toggle="kh94">
-    <span style="color:#2ecc71;font-weight:600"><span class="arrow">▶</span>${t}</span>
-    <span class="n">${n}</span></div>` + kh94Block(kh);
+  // раскрывающаяся строка: клик разворачивает список объектов под ней
+  const rowExp = (t, color, list, emptyMsg) =>
+    `<div class="stats-row link">
+      <span style="color:${color};font-weight:600"><span class="arrow">▶</span>${t}</span>
+      <span class="n">${list.length}</span></div>` + objBlock(list, emptyMsg);
+  const rrList   = statObjects(p => p.rr);
+  const stopList = statObjects(p => p.dst === 'stop');
   document.getElementById('stats-body').innerHTML =
     `<div class="stats-sec">Участки</div>`
     + row('Всего участков', s.total)
     + row('Имели ЕГРН с запорожским кадастром (96:…)', s.zapEgrn)
-    + rowKh('Кадастровые ХО (94:…)', kh.length)
+    + rowExp('Кадастровые ХО (94:…)', '#2ecc71', kh94Objects(), 'Пока нет объектов с кадастром 94:…')
     + row('Со старым запорожским адресом', s.zapAddr)
     + row('Присвоен адрес ФИАС ХО', s.khAddr)
-    + row('🟢 Адрес сменён в Росреестре (Херсонская обл.)', s.rr)
-    + row('🟡 Регистрация права приостановлена', s.stop)
+    + rowExp('🟢 Адрес сменён в Росреестре (Херсонская обл.)', '#2ecc71', rrList, 'Пока нет')
+    + rowExp('🟡 Регистрация права приостановлена', '#e8c547', stopList, 'Приостановок нет')
     + (s.deny ? row('🔴 В регистрации права отказано', s.deny) : '')
     + `<div class="stats-sec">Здания</div>`
     + row('Всего зданий', s.housesTotal)
