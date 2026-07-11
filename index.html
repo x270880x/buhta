@@ -8,10 +8,15 @@
 <meta name="referrer" content="no-referrer">
 <title>Бухта — кадастровая карта</title>
 <meta name="description" content="Бухта — кадастровая карта"/>
+<link rel="preconnect" href="https://unpkg.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+<link rel="dns-prefetch" href="https://cdn.sheetjs.com">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600;700&display=swap">
+<!-- SheetJS (xlsx) грузится лениво при первом экспорте в Excel — см. ensureXLSX() -->
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600;700&display=swap');
   :root {
     --bg: #0f1117;
     --surface: #181c27;
@@ -704,10 +709,13 @@ function reorderByArea(layer, council) {
   ls.forEach(l => l.bringToFront()); // большой первый уходит вниз, мелкий последний — наверх
 }
 
+const _polyLoading = {};
 async function loadCouncilPolygons(code) {
   if (polygonLayers[code]) return polygonLayers[code];
+  if (_polyLoading[code]) return _polyLoading[code]; // защита от параллельных вызовов: строим слой один раз
   const council = COUNCILS.find(c => c.code === code);
   if (!council) return null;
+  const _p = (async () => {
   // Ensure council data is loaded for popup info
   await ensureCouncilParcels(council);
   try {
@@ -772,6 +780,11 @@ async function loadCouncilPolygons(code) {
     console.warn(`No polygons for ${code}:`, e);
     return null;
   }
+  })();
+  _polyLoading[code] = _p;
+  const r = await _p;
+  delete _polyLoading[code];
+  return r;
 }
 
 // Красный уголок-маркер на участках с присвоенным адресом РФ
@@ -998,7 +1011,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.28';
+const BUILD_VERSION = '5.29';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1374,7 +1387,22 @@ function downloadCsv(rows, filename) {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
-function downloadXlsx(rows, filename, sheetName) {
+// SheetJS ~900КБ грузится по требованию — только при первом экспорте в Excel, не на каждой загрузке карты
+let _xlsxP = null;
+function ensureXLSX() {
+  if (window.XLSX) return Promise.resolve();
+  if (_xlsxP) return _xlsxP;
+  _xlsxP = new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js';
+    s.onload = res;
+    s.onerror = () => { _xlsxP = null; rej(new Error('Не удалось загрузить библиотеку Excel')); };
+    document.head.appendChild(s);
+  });
+  return _xlsxP;
+}
+
+async function downloadXlsx(rows, filename, sheetName) {
   if (!rows.length) { alert('Нет данных для выгрузки'); return; }
   // Большие выгрузки — CSV вместо XLSX (SheetJS не тянет >100k строк)
   if (rows.length > 50000) {
@@ -1384,6 +1412,7 @@ function downloadXlsx(rows, filename, sheetName) {
     }
     return;
   }
+  await ensureXLSX();
   const ws = XLSX.utils.json_to_sheet(rows);
   const widths = {
     'Кадастровый номер': 24, 'Площадь, га': 12, 'Регион': 12,
@@ -1443,7 +1472,7 @@ async function exportFiltered() {
   if (filterCategory) tags.push('кат_' + filterCategory.slice(0,30).replace(/[^а-яА-Яa-zA-Z0-9]/g,'_'));
   if (filterLeaseYear) tags.push('год_' + filterLeaseYear);
   if (tags.length) suffix = tags.join('__');
-  downloadXlsx(rows, `Кадастр_${suffix}_${stamp}.xlsx`, 'Участки');
+  await downloadXlsx(rows, `Кадастр_${suffix}_${stamp}.xlsx`, 'Участки');
   } catch (e) {
     alert('Ошибка экспорта: ' + (e.message || e));
     console.error(e);
@@ -1461,7 +1490,7 @@ async function exportCouncil(code) {
   const rows = parcelsToRows(parcels, c);
   const stamp = new Date().toISOString().slice(0,10);
   const safe = c.name.replace(/[^а-яА-Яa-zA-Z0-9]/g,'_');
-  downloadXlsx(rows, `${safe}_${stamp}.xlsx`, c.name.slice(0,30));
+  await downloadXlsx(rows, `${safe}_${stamp}.xlsx`, c.name.slice(0,30));
 }
 
 // Sidebar stats
@@ -1639,7 +1668,7 @@ document.getElementById('btn-basket-export').addEventListener('click', async () 
       }
     }
     const stamp = new Date().toISOString().slice(0,10);
-    downloadXlsx(rows, `Корзина_${rows.length}_${stamp}.xlsx`, 'Корзина');
+    await downloadXlsx(rows, `Корзина_${rows.length}_${stamp}.xlsx`, 'Корзина');
     if (missing > 0) console.log(`${missing} кадастров не найдены в базе — вписаны пустые строки`);
   } catch (e) {
     alert('Ошибка: ' + (e.message || e));
@@ -2362,6 +2391,7 @@ function kuvdWorkbook(k) {
 document.getElementById('kuvd-dl').addEventListener('click', async () => {
   const k = await loadKuvd();
   if (!k) return;
+  await ensureXLSX();
   XLSX.writeFile(kuvdWorkbook(k), 'kuvd-buhta.xlsx');
 });
 document.getElementById('kuvd-body').addEventListener('click', e => {
@@ -2464,7 +2494,8 @@ function fitStartView() {
   clampView();
 }
 // Автоподгрузка контуров совета на старте + применить фильтр после загрузки
-setTimeout(() => loadCouncilPolygons('2320355400').then(() => { applyEgrnFilter(); fitStartView(); }), 100);
+// 0 вместо 100 мс: скрипт в конце body, размеры контейнера уже есть, fitStartView сам ждёт ненулевой размер
+setTimeout(() => loadCouncilPolygons('2320355400').then(() => { applyEgrnFilter(); fitStartView(); }), 0);
 // Если хочешь видеть всю карту — раскомментируй ниже:
 // const bounds = L.latLngBounds(COUNCILS.filter(c=>c.lat).map(c=>[c.lat,c.lon]));
 // map.fitBounds(bounds, { padding: [40, 40] });
