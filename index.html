@@ -841,12 +841,12 @@ function statusBlock(d) {
   const stop = d.dst === 'stop';
   const c = stop ? '#e8c547' : '#e23b3b';
   const head = stop
-    ? `🟡 Регистрация права приостановлена${d.duntil ? ` до ${d.duntil}` : ''}`
+    ? `🟡 Регистрация права приостановлена${d.duntil ? ` до ${escapeHtml(d.duntil)}` : ''}`
     : `🔴 В регистрации права отказано`;
   return `<div style="margin-top:4px;padding:5px 8px;border-left:3px solid ${c};background:rgba(255,255,255,.03)">
     <div style="color:${c};font-weight:600">${head}</div>
-    ${d.dkuvd ? `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#aaa;margin-top:2px">${d.dkuvd}${COPY_BTN(d.dkuvd)}</div>` : ''}
-    ${d.dwhy ? `<div style="font-size:11px;color:#bbb;margin-top:3px;line-height:1.4">${d.dwhy}</div>` : ''}
+    ${d.dkuvd ? `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#aaa;margin-top:2px">${escapeHtml(d.dkuvd)}${COPY_BTN(d.dkuvd)}</div>` : ''}
+    ${d.dwhy ? `<div style="font-size:11px;color:#bbb;margin-top:3px;line-height:1.4">${escapeHtml(d.dwhy)}</div>` : ''}
   </div>`;
 }
 
@@ -906,10 +906,10 @@ function buildingsBlock(data) {
   const rows = list.map(b => {
     const green = !!b.rr;
     const cadHtml = b.cad
-      ? `<div style="margin-top:1px"><span style="font-family:'IBM Plex Mono',monospace;color:${green ? '#2ecc71' : '#e8c547'}">${b.cad}</span>${COPY_BTN(b.cad)}${green ? ` <span style="color:#2ecc71;font-size:10px;font-weight:600">🟢 РР ХО</span>` : ''}</div>`
+      ? `<div style="margin-top:1px"><span style="font-family:'IBM Plex Mono',monospace;color:${green ? '#2ecc71' : '#e8c547'}">${escapeHtml(b.cad)}</span>${COPY_BTN(b.cad)}${green ? ` <span style="color:#2ecc71;font-size:10px;font-weight:600">🟢 РР ХО</span>` : ''}</div>`
       : '';
     return `<div style="margin-top:3px">
-      <span style="color:${green ? '#2ecc71' : '#e8e8e8'};font-weight:600">${b.lit}</span>${b.area ? `<span style="color:#aaa"> · ${b.area}</span>` : ''}
+      <span style="color:${green ? '#2ecc71' : '#e8e8e8'};font-weight:600">${escapeHtml(b.lit)}</span>${b.area ? `<span style="color:#aaa"> · ${escapeHtml(b.area)}</span>` : ''}
       ${cadHtml}</div>`;
   }).join('');
   const n = list.length;
@@ -938,18 +938,18 @@ function buildParcelPopup(cad, data, council) {
     <div style="font-size:12px;color:#e8e8e8;max-width:320px;line-height:1.45">
       <div style="font-family:'IBM Plex Mono',monospace;font-weight:600;color:#e8c547;font-size:13px;margin-bottom:2px">${cad}${COPY_BTN(cad)}</div>
       <div style="font-size:14px;color:#aaa;margin-bottom:6px;font-weight:600">${data.a} га</div>
-      ${znDisp(data.zn) ? `<div><b style="color:#aaa">массив:</b> ${znDisp(data.zn)}</div>` : ''}
-      ${data.o ? `<div><b style="color:#aaa">владелец:</b> ${data.o}</div>` : ''}
-      ${data.r ? `<div><b style="color:#aaa">аренд.:</b> ${data.r}</div>` : ''}
-      ${data.ed ? `<div><b style="color:#aaa">договор до:</b> <span style="color:${expColor}">${data.ed}</span>${data.cn?` · №${data.cn}`:''}</div>` : ''}
-      ${data.cadrf ? `<div style="margin-top:4px"><span title="есть РФ-кадастр">🇷🇺</span> <b style="color:#aaa">кадастровый РФ:</b> <span style="font-family:'IBM Plex Mono',monospace;color:#e8c547">${data.cadrf}</span>${COPY_BTN(data.cadrf)}</div>` : ''}
-      ${data.egrn ? `<div style="color:#4caf7d;font-weight:600;margin-top:2px">✓ оформлен ЕГРН${(typeof data.egrn==='string' && data.egrn && data.egrn!=='да') ? ` · ${data.egrn}` : ''}</div>` : ''}
-      ${data.fias ? `<div style="margin-top:4px"><b style="color:#aaa">адрес РФ:</b> с. Бухта, ${data.fias}</div>` : ''}
+      ${znDisp(data.zn) ? `<div><b style="color:#aaa">массив:</b> ${escapeHtml(znDisp(data.zn))}</div>` : ''}
+      ${data.o ? `<div><b style="color:#aaa">владелец:</b> ${escapeHtml(data.o)}</div>` : ''}
+      ${data.r ? `<div><b style="color:#aaa">аренд.:</b> ${escapeHtml(data.r)}</div>` : ''}
+      ${data.ed ? `<div><b style="color:#aaa">договор до:</b> <span style="color:${expColor}">${escapeHtml(data.ed)}</span>${data.cn?` · №${escapeHtml(data.cn)}`:''}</div>` : ''}
+      ${data.cadrf ? `<div style="margin-top:4px"><span title="есть РФ-кадастр">🇷🇺</span> <b style="color:#aaa">кадастровый РФ:</b> <span style="font-family:'IBM Plex Mono',monospace;color:#e8c547">${escapeHtml(data.cadrf)}</span>${COPY_BTN(data.cadrf)}</div>` : ''}
+      ${data.egrn ? `<div style="color:#4caf7d;font-weight:600;margin-top:2px">✓ оформлен ЕГРН${(typeof data.egrn==='string' && data.egrn && data.egrn!=='да') ? ` · ${escapeHtml(data.egrn)}` : ''}</div>` : ''}
+      ${data.fias ? `<div style="margin-top:4px"><b style="color:#aaa">адрес РФ:</b> с. Бухта, ${escapeHtml(data.fias)}</div>` : ''}
       ${data.rr && !data.dst ? `<div style="color:#2ecc71;font-weight:600;margin-top:2px">🟢 Зарегистрирован в Росреестре (Херсонская обл.)</div>` : ''}
       ${statusBlock(data)}
       ${buildingsBlock(data)}
-      ${data.post ? `<div style="color:#aaa;font-size:11px;margin-top:3px">постановление № ${data.post}</div>` : ''}
-      ${otRu ? `<div style="color:#aaa;font-size:12px;margin-top:6px">${otRu}</div>` : ''}
+      ${data.post ? `<div style="color:#aaa;font-size:11px;margin-top:3px">постановление № ${escapeHtml(data.post)}</div>` : ''}
+      ${otRu ? `<div style="color:#aaa;font-size:12px;margin-top:6px">${escapeHtml(otRu)}</div>` : ''}
     </div>`;
 }
 
@@ -998,7 +998,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.27';
+const BUILD_VERSION = '5.28';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1168,6 +1168,8 @@ async function showDetail(code) {
   const c = COUNCILS.find(x => x.code === code);
   if (!c) return;
   const det = document.getElementById('detail');
+  // правый детальный блок убран из минимального UI — сохраняем только загрузку участков
+  if (!det) { await ensureCouncilParcels(c); return; }
   det.classList.remove('detail-empty');
   // Show loading state immediately
   if (!c.parcels) {
@@ -1649,13 +1651,14 @@ document.getElementById('btn-basket-export').addEventListener('click', async () 
 });
 
 document.getElementById('btn-reset').addEventListener('click', () => {
-  filterRenter = filterCategory = filterRegion = filterLeaseYear = '';
+  filterRenter = filterCategory = filterRegion = filterLeaseYear = filterMz = '';
   filterOwnership = new Set();
   document.getElementById('filter-renter').value = '';
   document.querySelectorAll('#filter-ownership input[data-ownership]').forEach(cb => cb.checked = false);
   document.getElementById('filter-category').value = '';
   document.getElementById('filter-region').value = '';
   document.getElementById('filter-lease-year').value = '';
+  document.getElementById('filter-mz').value = '';
   document.getElementById('search').value = '';
   document.getElementById('search-results').style.display = 'none';
   buildMarkers();
@@ -1722,7 +1725,8 @@ search.addEventListener('input', e => {
   }
   // 3+ цифр (или фрагмент кадастра с ':') → искать участки по кадастру (укр / РФ / здания)
   if (/^[\d:/]{3,}$/.test(q)) {
-    const qd = q.replace(/:/g, '');
+    const qd = q.replace(/[:/]/g, '');
+    if (qd.length < 3) { sr.style.display = 'none'; return; } // «:::» → пустой фрагмент матчил бы всё
     const results = [];
     for (const c of COUNCILS) {
       if (!c.parcels) continue;
@@ -1886,8 +1890,9 @@ function applyEgrnFilter() {
       if (el) el.style.display = visible ? '' : 'none';
     });
   });
-  // красные уголки видны только когда участки видны (режим all или addr)
-  rfCornerGroups.forEach(g => { if (egrnMode === 'other') map.removeLayer(g); else if (!map.hasLayer(g)) g.addTo(map); });
+  // флажки видны только когда видны все их участки — в режимах all и addr (иначе висят над скрытыми)
+  const flagsVisible = (egrnMode === 'all' || egrnMode === 'addr');
+  rfCornerGroups.forEach(g => { if (!flagsVisible) map.removeLayer(g); else if (!map.hasLayer(g)) g.addTo(map); });
   // Пересчёт шапки под выбранный фильтр
   let shown = parcels;
   if (egrnMode === 'egrn') shown = parcels.filter(p => p.egrn);
@@ -1998,8 +2003,9 @@ function kh94Objects() {
   return out;
 }
 
-// Участки/здания, у которых poле статуса совпадает — для раскрывающихся строк статистики.
-// pred получает участок; чтобы попали и здания/unbound, передаётся отдельный bPred.
+// Участки по предикату — для раскрывающихся строк статистики (раздел «Участки»).
+// Считает ТОЛЬКО участки (счётчики s.rr/s.stop тоже по участкам). Если у зданий/unbound
+// появится dst — их надо будет учитывать отдельно, здесь они намеренно не участвуют.
 function statObjects(pred) {
   const c = COUNCILS.find(x => x.code === '2320355400');
   const ps = (c && c.parcels) || [];
@@ -2034,7 +2040,8 @@ async function showStats() {
     `<div class="stats-row link">
       <span style="color:${color};font-weight:600"><span class="arrow">▶</span>${t}</span>
       <span class="n">${list.length}</span></div>` + objBlock(list, emptyMsg);
-  const rrList   = statObjects(p => p.rr);
+  // dst перебивает rr: приостановленные не считаем «сменившими адрес» (как в ИНФО/попапе/флажке)
+  const rrList   = statObjects(p => p.rr && !p.dst);
   const stopList = statObjects(p => p.dst === 'stop');
   document.getElementById('stats-body').innerHTML =
     `<div class="stats-sec">Участки</div>`
@@ -2118,6 +2125,7 @@ function infoObjects() {
 }
 
 function renderInfo() {
+  if (!INFO_ROWS) return;   // клик по чипу до загрузки registrations.json — просто ждём
   const esc = s => escapeHtml(String(s || ''));
   const regByCad = new Map(), noteByCad = new Map();
   if (REG_DATA) {
@@ -2422,12 +2430,16 @@ function clampView() {
     map._clamping = false;
   }
 }
+let _fsvTries = 0;
 function fitStartView() {
   // Контейнер может быть ещё без размера (фоновая вкладка) — ждём, иначе вся математика = NaN
   map.invalidateSize({ animate: false });
   const sz = map.getSize();
+  // ограничение попыток: ~15 с, чтобы не крутить бесконечно при сбое загрузки геометрии
+  if (++_fsvTries > 60) return;
   if (!sz.x || !sz.y) { setTimeout(fitStartView, 250); return; }
   if (!computeLimits()) { setTimeout(fitStartView, 250); return; } // жёсткая рамка + minZoom: полоса 0002→0059 + 3 см
+  _fsvTries = 0;
   // Первый показ: зум 16.6, полоса 0002→0069 по центру, снизу ~3 см моря
   const A = parcelGeomIndex['2320355400:11:003:0002'];
   const B = parcelGeomIndex['2320355400:11:003:0069'];
