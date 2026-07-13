@@ -1011,7 +1011,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.29';
+const BUILD_VERSION = '5.30';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1993,7 +1993,7 @@ function kuvdSection(k) {
       : d < 0 ? `<span style="color:#e8c547">−${-d}</span>` : `<span style="color:#5bb8ff">+${d}</span>`;
     const dop = c.доп_права ? ` + ${c.доп_права} доп. право` : '';
     return `<div class="stats-row" title="${c.обьектов} об.: ${c.с_запорожским_кадастром}×1 + ${c.без_кадастра_рф}×2${dop}">
-      <span>${o.владелец}</span>
+      <span>${o.short || o.владелец}</span>
       <span class="n">${o.номеров} / ${c.ожидается_кувд} ${mark}</span></div>`;
   }).join('');
   return `<div class="stats-sec">Заявления (КУВД)</div>`
@@ -2279,7 +2279,7 @@ function renderKuvd(k) {
     const mark = d === 0 ? '<span style="color:#2ecc71">сходится</span>'
       : d < 0 ? `<span style="color:#e8c547">расхождение −${-d}</span>`
               : `<span style="color:#5bb8ff">расхождение +${d}</span>`;
-    html += `<div class="kuvd-owner" data-owner="${esc(o.владелец.toLowerCase())}">${esc(o.владелец)} — ${o.номеров}</div>
+    html += `<div class="kuvd-owner" data-owner="${esc((o.short || o.владелец).toLowerCase())}">${esc(o.short || o.владелец)} — ${o.номеров}</div>
       <div class="kuvd-sub">в базе ${ob.участки} уч. + ${ob.здания} зд. ·
         ожидается ${s.ожидается_кувд} (${s.с_запорожским_кадастром}×1 + ${s.без_кадастра_рф}×2${s.доп_права ? ` + ${s.доп_права} доп. право` : ''}) · ${mark}
         ${o.примечание ? `<div style="margin-top:2px;color:#7a7a7a">${esc(o.примечание)}</div>` : ''}</div>
@@ -2326,14 +2326,13 @@ document.getElementById('kuvd-close').addEventListener('click', () => document.g
 document.getElementById('kuvd-modal').addEventListener('click', e => { if (e.target.id === 'kuvd-modal') e.target.classList.remove('open'); });
 document.getElementById('kuvd-search').addEventListener('input', applyKuvdSearch);
 // Excel собирается в браузере из kuvd.json (SheetJS уже подключён) — файл не может устареть
-// KUVD_XLSX_ANON: в выгрузке ФИО заменяются на «Владелец N» (в интерфейсе имена остаются).
-// Поставить false, чтобы вернуть фамилии в Excel.
-const KUVD_XLSX_ANON = true;
+// KUVD_XLSX_ANON: true → в выгрузке «Владелец N» вместо ФИО. false → реальные фамилии с инициалами (short).
+const KUVD_XLSX_ANON = false;
 
 function kuvdWorkbook(k) {
-  // подписи владельцев для выгрузки: имя → «Владелец N» (индекс стабилен, листы сшиваются между собой)
+  // подписи владельцев для выгрузки: либо «Владелец N», либо «Фамилия И.О.» (o.short)
   const label = new Map();
-  k.владельцы.forEach((o, idx) => label.set(o.владелец, KUVD_XLSX_ANON ? `Владелец ${idx + 1}` : o.владелец));
+  k.владельцы.forEach((o, idx) => label.set(o.владелец, KUVD_XLSX_ANON ? `Владелец ${idx + 1}` : (o.short || o.владелец)));
 
   const rows = [];
   let i = 0;
