@@ -395,6 +395,7 @@
   /* Минимальный UI — оставлен только поиск по кадастру (но фильтр ЕГРН показываем) */
   .filter-group:not(:first-of-type):not(:has(#egrn-filter)),
   #btn-export-all,
+  #btn-export-all-csv,
   #btn-toggle-polys,
   #btn-reset,
   aside.left .stats-block,
@@ -598,7 +599,7 @@ const map = L.map('map', {
   bearing: 60,
   rotateControl: { closeOnZeroBearing: false },
   zoomSnap: 0.1,
-  zoomDelta: 0.5,
+  zoomDelta: 1.2,                     // шаг кнопок +/− и двойного клика
   inertia: false,                    // без инерции — рамка держит жёстко, без отскока
   minZoom: 15,                       // ближе 15 не отдалять
   maxBounds: [[46.0687, 35.1796], [46.3967, 35.3148]], // центр — участок 11:003:0238, за края не выйти
@@ -1014,7 +1015,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.31';
+const BUILD_VERSION = '5.32';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
