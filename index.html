@@ -467,7 +467,8 @@
   <div class="stats-card">
     <div class="stats-head">
       <span>🔢 КУВД — заявления в Росреестр</span>
-      <button class="kuvd-dl" id="kuvd-dl" title="Excel: все КУВД, сверка по владельцам, проблемы">⬇ Скачать Excel</button>
+      <button class="kuvd-dl" id="kuvd-dl" title="Excel: все КУВД, сверка по владельцам, проблемы">⬇ Excel</button>
+      <button class="kuvd-dl" id="kuvd-dl-csv" style="margin-left:6px" title="CSV: плоский список всех КУВД (мгновенно, без загрузки модуля)">📄 CSV</button>
       <button id="kuvd-close">×</button>
     </div>
     <div class="info-note" id="kuvd-note"></div>
@@ -546,6 +547,7 @@
     </div>
 
     <button class="btn-export" id="btn-export-all">📥 Выгрузить в Excel</button>
+    <button class="btn-export" id="btn-export-all-csv" style="margin-bottom:6px">📄 Выгрузить в CSV</button>
     <button class="btn-reset" id="btn-toggle-polys" style="background:transparent;color:var(--blue);border-color:var(--blue);margin-bottom:6px">⌘ Контуры участков</button>
     <button class="btn-reset" id="btn-reset">Сбросить фильтры</button>
 
@@ -555,7 +557,8 @@
       <h3>🛒 Корзина: <span id="basket-count" style="color:var(--accent)">0</span> участков</h3>
       <textarea id="basket-input" placeholder="Вставьте кадастры через перенос строки или запятую — добавятся в корзину" rows="3" style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:3px;padding:6px;font-family:'IBM Plex Mono',monospace;font-size:10px;resize:vertical;margin-bottom:6px"></textarea>
       <button id="btn-basket-add" class="btn-export" style="margin-bottom:4px">Добавить в корзину</button>
-      <button id="btn-basket-export" class="btn-export" style="background:var(--green);color:#fff;border-color:var(--green);margin-bottom:4px">📥 Выгрузить корзину</button>
+      <button id="btn-basket-export" class="btn-export" style="background:var(--green);color:#fff;border-color:var(--green);margin-bottom:4px">📥 Корзина в Excel</button>
+      <button id="btn-basket-export-csv" class="btn-export" style="background:var(--green);color:#fff;border-color:var(--green);margin-bottom:4px">📄 Корзина в CSV</button>
       <button id="btn-basket-clear" class="btn-reset" style="margin-bottom:0">Очистить корзину</button>
       <div style="color:var(--muted);font-size:10px;margin-top:6px">Клик по полигону на карте — тоже добавит/уберёт</div>
     </div>
@@ -1011,7 +1014,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.30';
+const BUILD_VERSION = '5.31';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1219,6 +1222,7 @@ async function showDetail(code) {
           </div>
         </div>
         <button class="btn-export-sm" onclick="exportCouncil('${c.code}')">📥 Excel</button>
+        <button class="btn-export-sm" onclick="exportCouncil('${c.code}','csv')">📄 CSV</button>
       </div>
     </div>
 
@@ -1429,8 +1433,8 @@ async function downloadXlsx(rows, filename, sheetName) {
   XLSX.writeFile(wb, filename);
 }
 
-async function exportFiltered() {
-  const btn = document.getElementById('btn-export-all');
+async function exportFiltered(fmt) {
+  const btn = document.getElementById(fmt === 'csv' ? 'btn-export-all-csv' : 'btn-export-all');
   const origText = btn.textContent;
   try {
     // Determine which councils to load
@@ -1456,7 +1460,7 @@ async function exportFiltered() {
         btn.textContent = `Загрузка ${loaded}/${need.length}…`;
       }
     }
-    btn.textContent = 'Формирую Excel...';
+    btn.textContent = fmt === 'csv' ? 'Формирую CSV...' : 'Формирую Excel...';
   const rows = [];
   for (const c of targetCouncils) {
     for (const p of (c.parcels || [])) {
@@ -1472,7 +1476,8 @@ async function exportFiltered() {
   if (filterCategory) tags.push('кат_' + filterCategory.slice(0,30).replace(/[^а-яА-Яa-zA-Z0-9]/g,'_'));
   if (filterLeaseYear) tags.push('год_' + filterLeaseYear);
   if (tags.length) suffix = tags.join('__');
-  await downloadXlsx(rows, `Кадастр_${suffix}_${stamp}.xlsx`, 'Участки');
+  if (fmt === 'csv') downloadCsv(rows, `Кадастр_${suffix}_${stamp}.csv`);
+  else await downloadXlsx(rows, `Кадастр_${suffix}_${stamp}.xlsx`, 'Участки');
   } catch (e) {
     alert('Ошибка экспорта: ' + (e.message || e));
     console.error(e);
@@ -1482,7 +1487,7 @@ async function exportFiltered() {
   }
 }
 
-async function exportCouncil(code) {
+async function exportCouncil(code, fmt) {
   const c = COUNCILS.find(x => x.code === code);
   if (!c) return;
   await ensureCouncilParcels(c);
@@ -1490,7 +1495,8 @@ async function exportCouncil(code) {
   const rows = parcelsToRows(parcels, c);
   const stamp = new Date().toISOString().slice(0,10);
   const safe = c.name.replace(/[^а-яА-Яa-zA-Z0-9]/g,'_');
-  await downloadXlsx(rows, `${safe}_${stamp}.xlsx`, c.name.slice(0,30));
+  if (fmt === 'csv') downloadCsv(rows, `${safe}_${stamp}.csv`);            // CSV — мгновенно, без загрузки модуля Excel
+  else await downloadXlsx(rows, `${safe}_${stamp}.xlsx`, c.name.slice(0,30));
 }
 
 // Sidebar stats
@@ -1586,7 +1592,8 @@ document.getElementById('filter-mz').addEventListener('change', e => {
   buildMarkers();
   if (activeCode) showDetail(activeCode);
 });
-document.getElementById('btn-export-all').addEventListener('click', exportFiltered);
+document.getElementById('btn-export-all').addEventListener('click', () => exportFiltered('xlsx'));
+document.getElementById('btn-export-all-csv').addEventListener('click', () => exportFiltered('csv'));
 document.getElementById('btn-toggle-polys').addEventListener('click', togglePolygons);
 
 // ── 🛒 Корзина участков ──
@@ -1634,9 +1641,9 @@ document.getElementById('btn-basket-clear').addEventListener('click', () => {
   basket.clear();
   basketUpdate();
 });
-document.getElementById('btn-basket-export').addEventListener('click', async () => {
+async function exportBasket(fmt, btn) {
   if (basket.size === 0) { alert('Корзина пуста'); return; }
-  const btn = document.getElementById('btn-basket-export');
+  btn = btn || document.getElementById('btn-basket-export');
   const orig = btn.textContent;
   btn.disabled = true;
   try {
@@ -1668,7 +1675,8 @@ document.getElementById('btn-basket-export').addEventListener('click', async () 
       }
     }
     const stamp = new Date().toISOString().slice(0,10);
-    await downloadXlsx(rows, `Корзина_${rows.length}_${stamp}.xlsx`, 'Корзина');
+    if (fmt === 'csv') downloadCsv(rows, `Корзина_${rows.length}_${stamp}.csv`);
+    else await downloadXlsx(rows, `Корзина_${rows.length}_${stamp}.xlsx`, 'Корзина');
     if (missing > 0) console.log(`${missing} кадастров не найдены в базе — вписаны пустые строки`);
   } catch (e) {
     alert('Ошибка: ' + (e.message || e));
@@ -1677,7 +1685,9 @@ document.getElementById('btn-basket-export').addEventListener('click', async () 
     btn.textContent = orig;
     btn.disabled = false;
   }
-});
+}
+document.getElementById('btn-basket-export').addEventListener('click', e => exportBasket('xlsx', e.currentTarget));
+document.getElementById('btn-basket-export-csv').addEventListener('click', e => exportBasket('csv', e.currentTarget));
 
 document.getElementById('btn-reset').addEventListener('click', () => {
   filterRenter = filterCategory = filterRegion = filterLeaseYear = filterMz = '';
@@ -2329,11 +2339,15 @@ document.getElementById('kuvd-search').addEventListener('input', applyKuvdSearch
 // KUVD_XLSX_ANON: true → в выгрузке «Владелец N» вместо ФИО. false → реальные фамилии с инициалами (short).
 const KUVD_XLSX_ANON = false;
 
-function kuvdWorkbook(k) {
-  // подписи владельцев для выгрузки: либо «Владелец N», либо «Фамилия И.О.» (o.short)
+// подписи владельцев: «Владелец N» либо «Фамилия И.О.» (o.short)
+function kuvdLabel(k) {
   const label = new Map();
   k.владельцы.forEach((o, idx) => label.set(o.владелец, KUVD_XLSX_ANON ? `Владелец ${idx + 1}` : (o.short || o.владелец)));
-
+  return label;
+}
+// плоская таблица «Все КУВД» — общая для Excel и CSV
+function kuvdRows(k) {
+  const label = kuvdLabel(k);
   const rows = [];
   let i = 0;
   k.владельцы.concat(k.без_владельца).forEach(grp => {
@@ -2353,6 +2367,12 @@ function kuvdWorkbook(k) {
       });
     });
   });
+  return rows;
+}
+
+function kuvdWorkbook(k) {
+  const label = kuvdLabel(k);
+  const rows = kuvdRows(k);
   const ws = XLSX.utils.json_to_sheet(rows);
   ws['!cols'] = [{ wch: 5 }, { wch: 23 }, { wch: 32 }, { wch: 14 }, { wch: 42 }, { wch: 24 }, { wch: 20 }, { wch: 18 }, { wch: 46 }];
   ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length, c: 8 } }) };
@@ -2392,6 +2412,11 @@ document.getElementById('kuvd-dl').addEventListener('click', async () => {
   if (!k) return;
   await ensureXLSX();
   XLSX.writeFile(kuvdWorkbook(k), 'kuvd-buhta.xlsx');
+});
+document.getElementById('kuvd-dl-csv').addEventListener('click', async () => {
+  const k = await loadKuvd();
+  if (!k) return;
+  downloadCsv(kuvdRows(k), 'kuvd-buhta.csv');   // CSV — мгновенно, без загрузки модуля Excel
 });
 document.getElementById('kuvd-body').addEventListener('click', e => {
   const el = e.target.closest('.kuvd-n.jump');
