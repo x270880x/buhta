@@ -229,6 +229,7 @@
   .kuvd-n.nohit { display: none; }
   .kuvd-n .tag { font-family: inherit; font-size: 10px; color: var(--st); margin-left: 6px; font-weight: 600; }
   .kuvd-n .warn { color: #e8c547; font-size: 10px; margin-left: 6px; }
+  .kuvd-n .kuvd-note-item { color: #e08a8a; font-size: 10px; line-height: 1.35; margin-top: 1px; font-family: 'IBM Plex Sans', sans-serif; white-space: normal; }
   .kuvd-n.jump { cursor: pointer; }
   .kuvd-n.jump:hover { background: var(--surface2); }
 
@@ -794,7 +795,8 @@ async function loadCouncilPolygons(code) {
 // Красный уголок-маркер на участках с присвоенным адресом РФ
 // Флажок по центру участка с адресом РФ: красный = адрес присвоен,
 // зелёный = прошла (пере)регистрация в Росреестре по Херсонской области (поле rr),
-// жёлтый = регистрация права приостановлена (dst='stop')
+// жёлтый = регистрация права приостановлена (dst='stop'),
+// крупный двойной красный = отказ (dst='deny') — надо переподавать
 const flagIcon = color => L.divIcon({
   html: '<div style="position:relative;width:14px;height:16px">'
       + `<div style="position:absolute;left:6px;top:0;width:1.5px;height:16px;background:${color.pole}"></div>`
@@ -805,7 +807,17 @@ const flagIcon = color => L.divIcon({
 const rfCornerIcon = flagIcon({ pole: '#7a1010', flag: '#e23b3b' });
 const rfCornerIconGreen = flagIcon({ pole: '#0a5c2a', flag: '#2ecc71' });
 const rfCornerIconStop = flagIcon({ pole: '#7a5c10', flag: '#e8c547' });   // регистрация приостановлена
-const flagFor = d => d.dst === 'stop' ? rfCornerIconStop : (d.rr ? rfCornerIconGreen : rfCornerIcon);
+// отказ (dst='deny') — крупный двойной красный флажок: надо переподавать
+const rfCornerIconDeny = L.divIcon({
+  html: '<div style="position:relative;width:21px;height:23px">'
+      + '<div style="position:absolute;left:8px;top:0;width:2.5px;height:23px;background:#7a1010"></div>'
+      + '<div style="position:absolute;left:10px;top:1px;width:0;height:0;border-top:6px solid transparent;border-bottom:6px solid transparent;border-left:13px solid #e23b3b;filter:drop-shadow(0 1px 1px rgba(0,0,0,.7))"></div>'
+      + '<div style="position:absolute;left:10px;top:12px;width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:11px solid #b71c1c;filter:drop-shadow(0 1px 1px rgba(0,0,0,.7))"></div>'
+      + '</div>',
+  className: '', iconSize: [21, 23], iconAnchor: [8, 23]
+});
+const flagFor = d => d.dst === 'deny' ? rfCornerIconDeny
+  : d.dst === 'stop' ? rfCornerIconStop : (d.rr ? rfCornerIconGreen : rfCornerIcon);
 function addRfCorners(layer, council) {
   const grp = L.layerGroup().addTo(map);
   rfCornerGroups.push(grp);
@@ -864,6 +876,10 @@ function statusBlock(d) {
     <div style="color:${c};font-weight:600">${head}</div>
     ${d.dkuvd ? `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#aaa;margin-top:2px">${escapeHtml(d.dkuvd)}${COPY_BTN(d.dkuvd)}</div>` : ''}
     ${d.dwhy ? `<div style="font-size:11px;color:#bbb;margin-top:3px;line-height:1.4">${escapeHtml(d.dwhy)}</div>` : ''}
+    ${d.dfix ? `<div style="font-size:11px;color:${c};margin-top:3px;font-weight:600;line-height:1.4">↻ ${escapeHtml(d.dfix)}</div>` : ''}
+    ${d.dcadrf ? `<div style="font-size:11px;color:#aaa;margin-top:2px">РФ-кадастр: <span style="font-family:'IBM Plex Mono',monospace;color:#e8c547">${escapeHtml(d.dcadrf)}</span>${COPY_BTN(d.dcadrf)}</div>` : ''}
+    ${d.duk ? `<div style="font-size:11px;color:#aaa">укр. кадастр: <span style="font-family:'IBM Plex Mono',monospace;color:#8fb7ff">${escapeHtml(d.duk)}</span></div>` : ''}
+    ${d.daddr ? `<div style="font-size:11px;color:#aaa">адрес: ${escapeHtml(d.daddr)}</div>` : ''}
   </div>`;
 }
 
@@ -1015,7 +1031,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.33';
+const BUILD_VERSION = '5.34';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -2278,10 +2294,11 @@ function renderKuvd(k) {
     const c = KUVD_ST[it.статус] || '#444';
     const cls = 'kuvd-n' + (it.укр_участок ? ' jump' : '');
     const tgt = it.укр_участок ? ` data-target="${esc(it.укр_участок)}"` : '';
-    const hay = [it.кувд, it.статус, it.обьект].join(' ').toLowerCase();
+    const hay = [it.кувд, it.статус, it.обьект, it.заметка].join(' ').toLowerCase();
     const tag = it.статус ? `<span class="tag">${esc(it.статус)}</span>` : '';
     const warn = (it['⚠'] ? '<span class="warn">⚠</span>' : '') + (it.дубль_в_списке ? '<span class="warn">×2</span>' : '');
-    return `<div class="${cls}"${tgt} style="--st:${c}" data-hay="${esc(hay)}" title="${esc(it.обьект || '')}">${esc(it.кувд)}${tag}${warn}</div>`;
+    const note = it.заметка ? `<div class="kuvd-note-item">(${esc(it.заметка)})</div>` : '';
+    return `<div class="${cls}"${tgt} style="--st:${c}" data-hay="${esc(hay)}" title="${esc(it.обьект || '')}">${esc(it.кувд)}${tag}${warn}${note}</div>`;
   };
 
   let html = '';
