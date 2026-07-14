@@ -733,7 +733,7 @@ async function loadCouncilPolygons(code) {
         const cad = f.properties.cadnum;
         parcelGeomIndex[cad] = f;
         const data = (council.parcels || []).find(p => p.c === cad);
-        l.bindPopup(buildParcelPopup(cad, data, council));
+        l.bindPopup(() => buildParcelPopup(cad, data, council));
         const unhover = lyr => {
           const c2 = lyr.feature.properties.cadnum;
           if (basket.has(c2)) lyr.setStyle({ color:'#ff0', weight:3, fillOpacity:0.7 });
@@ -950,6 +950,81 @@ function buildingsBlock(data) {
     <b style="color:#aaa">🏠 ${n > 1 ? `Здания (${n})` : 'Здание'}:</b>${rows}</div>`;
 }
 
+// Дата из строки ("10.06.2026" или "01/05-372 от 10.06.2026") → { num: 20260610, str: '10.06.2026' }
+function ruDate(s) {
+  const m = (s || '').match(/(\d{2})\.(\d{2})\.(\d{4})/);
+  return m ? { num: +(m[3] + m[2] + m[1]), str: `${m[1]}.${m[2]}.${m[3]}` } : null;
+}
+
+// Авто-история действий по участку — хронология СОБИРАЕТСЯ из уже имеющихся данных
+// (без отдельного поля): постановка на учёт (ЕГРН/кадастр), постановление об адресе,
+// заявления КУВД (учёт/право), приостановка/отказ Росреестра, регистрация в РР ХО.
+function historyBlock(data) {
+  const kv = KUVD_BY_PARCEL[data.c] || [];
+  const dnum = (data.dkuvd || '').replace(/\/\d+$/, '');   // № уведомления на участке без суффикса «/1»
+  const parcelDate = ruDate(data.ddate);
+  const ev = [];
+  const seen = new Set();
+
+  // 1. Поставлен на кадастровый учёт (ЕГРН). Дату при наличии достаём из заметки КУВД («…кадастр… от ДД.ММ.ГГГГ»).
+  if (data.egrn || data.cadrf) {
+    let d = null;
+    for (const e of kv) { const m = (e.заметка || '').match(/кадастр[^.]*?от\s*(\d{2}\.\d{2}\.\d{4})/i); if (m) { d = ruDate(m[1]); break; } }
+    ev.push({ key: d ? d.num : 0, date: d ? d.str : '', color: '#5bb8ff', icon: '🇷🇺',
+      title: 'Поставлен на кадастровый учёт (ЕГРН)', sub: data.cadrf ? `РФ-кадастр ${data.cadrf}` : '' });
+  }
+  // 2. Постановление о присвоении адреса РФ
+  if (data.post) {
+    const d = ruDate(data.post);
+    ev.push({ key: d ? d.num : 1, date: d ? d.str : '', color: '#c9c9c9', icon: '📄',
+      title: 'Постановление о присвоении адреса РФ', sub: `№ ${data.post.replace(/\s*от\s*\d.*$/, '')}` });
+  }
+  // 3. Заявления в Росреестр (КУВД), привязанные к участку через «укр_участок»
+  const META = {
+    'приостановка': ['🟡', '#e8c547', 'Приостановка регистрации права'],
+    'отказ':        ['🔴', '#e23b3b', 'Отказ Росреестра'],
+    'готово':       ['🟢', '#2ecc71', 'Заявление исполнено'],
+  };
+  kv.forEach(e => {
+    const num = (e.кувд || '').replace(/\/\d+$/, '');
+    seen.add(num);
+    const linked = dnum && num === dnum;                 // та же запись, что и в полях dst участка
+    const meta = META[e.статус] || ['◻', '#9aa2ab', 'Заявление подано'];
+    const d = ruDate(e.дата) || (linked ? parcelDate : null) || parcelDate;
+    const until = e.до || (linked ? data.duntil : '');
+    const reason = e.заметка || (linked ? data.dwhy : '');
+    ev.push({ key: d ? d.num : (e.статус === 'отказ' ? 99999998 : 99999997), date: d ? d.str : '',
+      color: meta[1], icon: meta[0], title: meta[2],
+      sub: [e.кувд, until ? `до ${until}` : '', reason].filter(Boolean).join(' · ') });
+  });
+  // 3b. Приостановка/отказ из полей участка, если отдельной записи КУВД для неё нет
+  if ((data.dst === 'stop' || data.dst === 'deny') && (!dnum || !seen.has(dnum))) {
+    const stop = data.dst === 'stop';
+    ev.push({ key: parcelDate ? parcelDate.num : 99999998, date: parcelDate ? parcelDate.str : '',
+      color: stop ? '#e8c547' : '#e23b3b', icon: stop ? '🟡' : '🔴',
+      title: stop ? 'Приостановка регистрации права' : 'Отказ в регистрации права',
+      sub: [data.dkuvd, data.duntil ? `до ${data.duntil}` : '', data.dwhy].filter(Boolean).join(' · ') });
+  }
+  // 4. Зарегистрирован в Росреестре (Херсонская обл.)
+  if (data.rr && !data.dst) {
+    ev.push({ key: 99999999, date: '', color: '#2ecc71', icon: '🟢',
+      title: 'Зарегистрирован в Росреестре (Херсонская обл.)', sub: '' });
+  }
+
+  if (!ev.length) return '';
+  ev.sort((a, b) => a.key - b.key);   // датированные — по дате (YYYYMMDD); недатированные — по этапу
+  const rows = ev.map(e => `
+    <div style="display:flex;gap:7px;margin-top:5px">
+      <div style="flex:0 0 58px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#7f8794;text-align:right;padding-top:2px">${e.date || '—'}</div>
+      <div style="flex:1 1 auto;min-width:0;border-left:2px solid ${e.color};padding-left:7px">
+        <div style="color:${e.color};font-weight:600;font-size:11px;line-height:1.3">${e.icon} ${escapeHtml(e.title)}</div>
+        ${e.sub ? `<div style="color:#a8adb5;font-size:10px;line-height:1.4;margin-top:1px">${escapeHtml(e.sub)}</div>` : ''}
+      </div>
+    </div>`).join('');
+  return `<div style="margin-top:6px;padding:6px 8px;border:1px solid var(--border);border-radius:4px">
+    <b style="color:#aaa">📜 История действий</b>${rows}</div>`;
+}
+
 function buildParcelPopup(cad, data, council) {
   const inBasket = basket.has(cad);
   const basketBtn = `<button onclick="basketToggle('${cad}')" style="margin-top:6px;padding:4px 10px;background:${inBasket?'#e05252':'var(--accent)'};color:#1a1a1a;border:none;border-radius:3px;cursor:pointer;font-family:inherit;font-size:11px;font-weight:600">${inBasket?'− убрать из корзины':'+ в корзину'}</button>`;
@@ -983,6 +1058,7 @@ function buildParcelPopup(cad, data, council) {
       ${buildingsBlock(data)}
       ${data.post ? `<div style="color:#aaa;font-size:11px;margin-top:3px">постановление № ${escapeHtml(data.post)}</div>` : ''}
       ${otRu ? `<div style="color:#aaa;font-size:12px;margin-top:6px">${escapeHtml(otRu)}</div>` : ''}
+      ${historyBlock(data)}
     </div>`;
 }
 
@@ -1031,7 +1107,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.36';
+const BUILD_VERSION = '5.37';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -2000,10 +2076,20 @@ function computeStats() {
 }
 // Заявления в Росреестр (kuvd.json). На объект подаётся 2 КУВД: кадастровый учёт + регистрация права.
 let KUVD_DATA = null;
+// Индекс «укр. участок → [записи КУВД]» — для авто-истории в попапе (historyBlock)
+let KUVD_BY_PARCEL = {};
+function indexKuvd(k) {
+  KUVD_BY_PARCEL = {};
+  if (!k || !k.владельцы) return;
+  [...(k.владельцы || []), ...(k.без_владельца || [])]
+    .flatMap(o => o.номера || [])
+    .forEach(e => { if (e.укр_участок) (KUVD_BY_PARCEL[e.укр_участок] = KUVD_BY_PARCEL[e.укр_участок] || []).push(e); });
+}
 async function loadKuvd() {
   if (KUVD_DATA === null) {
     try { KUVD_DATA = await (await fetch(`kuvd.json?v=${BUILD_VERSION}`)).json(); }
     catch (e) { KUVD_DATA = false; }
+    indexKuvd(KUVD_DATA);
   }
   return KUVD_DATA;
 }
@@ -2537,7 +2623,8 @@ function fitStartView() {
 }
 // Автоподгрузка контуров совета на старте + применить фильтр после загрузки
 // 0 вместо 100 мс: скрипт в конце body, размеры контейнера уже есть, fitStartView сам ждёт ненулевой размер
-setTimeout(() => loadCouncilPolygons('2320355400').then(() => { applyEgrnFilter(); fitStartView(); }), 0);
+// Предзагружаем КУВД до контуров, чтобы авто-история в попапах была наполнена сразу
+setTimeout(() => loadKuvd().then(() => loadCouncilPolygons('2320355400')).then(() => { applyEgrnFilter(); fitStartView(); }), 0);
 // Если хочешь видеть всю карту — раскомментируй ниже:
 // const bounds = L.latLngBounds(COUNCILS.filter(c=>c.lat).map(c=>[c.lat,c.lon]));
 // map.fitBounds(bounds, { padding: [40, 40] });
