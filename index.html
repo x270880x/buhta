@@ -194,13 +194,13 @@
   .leaflet-popup-content .pstats { margin-top: 4px; color: var(--muted); font-size: 11px; font-family: 'IBM Plex Mono', monospace; }
 
   /* Статистика (кнопка в шапке + модалка) */
-  #stats-btn, #info-btn, #kuvd-btn, #reestr-btn, #kuvdlist-btn {
+  #stats-btn, #info-btn, #kuvd-btn, #reestr-btn {
     background: var(--surface2); color: var(--accent); border: 1px solid var(--accent);
     border-radius: 4px; padding: 6px 12px; cursor: pointer;
     font-family: inherit; font-size: 12px; font-weight: 600; align-self: center;
     text-decoration: none; display: inline-block; line-height: normal;
   }
-  #stats-btn:hover, #info-btn:hover, #kuvd-btn:hover, #reestr-btn:hover, #kuvdlist-btn:hover { background: var(--accent); color: #1a1a1a; }
+  #stats-btn:hover, #info-btn:hover, #kuvd-btn:hover, #reestr-btn:hover { background: var(--accent); color: #1a1a1a; }
   #stats-modal, #info-modal, #kuvd-modal {
     position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,.55);
     display: none; align-items: center; justify-content: center;
@@ -440,7 +440,6 @@
     <button id="info-btn" title="Все адреса ФИАС ХО: владельцы, размеры, кадастры, статус документов">📋 ИНФО</button>
     <button id="kuvd-btn" title="Все номера КУВД по владельцам, со скачиванием списка">🔢 КУВД</button>
     <a id="reestr-btn" href="rosreestr_registry.html" target="_blank" rel="noopener" title="Реестр документов Росреестра: выписки, кадастровый учёт, регистрация права, приостановки и отказы — с поиском, фильтрами и статистикой">📑 Реестр РР</a>
-    <a id="kuvdlist-btn" href="kuvd_list.html" target="_blank" rel="noopener" title="Полный список всех сданных заявлений (КУВД) с номерами и владельцами">📋 КУВД-список</a>
   </div>
 </header>
 <div id="stats-modal">
@@ -1126,7 +1125,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.42';
+const BUILD_VERSION = '5.43';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
