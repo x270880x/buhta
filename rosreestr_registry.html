@@ -98,6 +98,10 @@ function buildStats(){
  const by=k=>records.reduce((m,r)=>{const v=r[k]||"—";m[v]=(m[v]||0)+1;return m},{});
  const st=by("status");
  const groups=uniq(records.map(r=>r.group)).length;
+ const SUSP={'12/1':'94:21:1010002:1','12/2':'94:21:1010002:3','15':'94:21:1010002:2','16':'96:01:0005445:222'};
+ const objKey=r=>r.cad_rf||SUSP[r.number]||r.group;
+ const objCount=new Set(records.map(objKey)).size;
+ const objCompleted=new Set(records.filter(r=>r.completed).map(objKey)).size;
  const reg94=records.filter(r=>/^94:/.test(r.cad_rf||"")).length;
  const reg96=records.filter(r=>/^96:/.test(r.cad_rf||"")).length;
  const reg96ho=records.filter(r=>/^96:/.test(r.cad_rf||"")&&r.addr_ho).length;
@@ -109,7 +113,7 @@ function buildStats(){
  const cC=records.filter(r=>r.status==="Только кадастровый учёт").length; // подан на право, получен только учёт
  const S=document.getElementById("summary");
  const card=(n,l,c)=>`<div class="stat ${c||''}"><b>${n}</b><span>${l}</span></div>`;
- S.innerHTML=card(total,"документов")+card(groups,"объектов / дел")
+ S.innerHTML=card(total,"документов")+card(objCount,"объектов (дел)")
    +card((st["Право зарегистрировано"]||0),"право зарегистрировано","g")
    +card((st["Приостановка"]||0),"приостановлено","y")
    +card((st["Отказ"]||0),"отказов","r");
@@ -119,12 +123,12 @@ function buildStats(){
  const gm={};records.forEach(r=>{(gm[r.group]=gm[r.group]||[]).push(r)});
  const gfull=Object.values(gm).filter(a=>a.every(r=>r.completed)).length;
  document.getElementById("completed-box").innerHTML=`<div style="background:#ecfdf3;border:1px solid #a7f3d0;border-left:5px solid var(--green);border-radius:14px;padding:14px 16px;margin-bottom:14px">
-   <div style="font-size:16px;font-weight:700;color:var(--green)">✅ Полностью оформлено — ${comp} из ${total} <span style="color:var(--muted);font-weight:400;font-size:13px">документов (право собственности + адрес в Херсонской обл.)</span></div>
+   <div style="font-size:16px;font-weight:700;color:var(--green)">✅ Полностью оформлено — ${objCompleted} из ${objCount} <span style="color:var(--muted);font-weight:400;font-size:13px">объектов (право собственности + адрес в Херсонской обл.)</span></div>
    <div style="font-size:13.5px;margin-top:7px;line-height:1.65">
      🟩 право получено сразу в Херсоне (кадастр <code>94:</code>): <b>${comp94}</b><br>
      🟦 был в собственности + адрес сменён с Запорожской на Херсонскую (кадастр <code>96:</code>): <b>${comp96}</b>
    </div>
-   <div style="color:var(--muted);font-size:12.5px;margin-top:7px;line-height:1.55">Дел закрыто полностью: <b>${gfull}</b> из ${groups}. Остальные <b>${total-comp}</b> документов — ещё в процессе: отказ ${st["Отказ"]||0} · только учёт ${st["Только кадастровый учёт"]||0} · сведения внесены ${st["Сведения внесены"]||0} · приостановка ${st["Приостановка"]||0}.</div>
+   <div style="color:var(--muted);font-size:12.5px;margin-top:7px;line-height:1.55">Остальные <b>${objCount-objCompleted}</b> объектов — ещё в процессе: отказ ${st["Отказ"]||0} · только учёт ${st["Только кадастровый учёт"]||0} · сведения внесены (МВВ) ${st["Сведения внесены"]||0} · приостановка ${st["Приостановка"]||0} <span style="font-size:11.5px">(это документы; у 3 участков по 2 бумаги — учёт + приостановка)</span>.</div>
    <div style="color:var(--muted);font-size:12px;margin-top:5px">Отфильтровать завершённые — «✅ Завершено» в списке статусов.</div></div>`;
  const unit=`<span style="font-size:13px;color:var(--muted);font-weight:400"> докум.</span>`;
  document.getElementById("cats").innerHTML=
@@ -201,7 +205,7 @@ function render(){
    </article>`).join("")}</div>`;
    app.appendChild(el);
  });
- document.getElementById("countline").textContent=`Показано: ${docn} документ(ов) в ${groups.length} объекте(ах)`;
+ document.getElementById("countline").textContent=`Показано: ${docn} документ(ов), сгруппировано по ${groups.length} адресам (участок + его здания вместе)`;
  if(!groups.length)app.innerHTML='<div class="note">По заданным фильтрам ничего не найдено.</div>';
 }
 ["q","status","owner","street","sort"].forEach(id=>document.getElementById(id).addEventListener("input",render));
