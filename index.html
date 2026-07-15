@@ -282,6 +282,12 @@
   .info-why.dim { color: var(--muted); }
   .info-reg { grid-column: 1 / -1; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px;
     color: #5bb8ff; margin-top: 2px; word-break: break-all; }
+  .info-fias { grid-column: 1 / -1; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px;
+    color: #8fbf9f; margin-top: 3px; line-height: 1.5; word-break: break-word;
+    border-top: 1px dashed var(--border); padding-top: 3px; }
+  .info-fias .gid { color: #b7d8c2; }
+  .info-fias .lbl { color: var(--muted); }
+  .info-fias .stwarn { color: #e8c547; font-weight: 600; }
   .info-empty { color: var(--muted); font-size: 12px; padding: 20px 0; text-align: center; }
   @media (max-width: 700px) {
     .info-row { grid-template-columns: 1fr; gap: 2px; }
@@ -456,9 +462,10 @@
       🟢 есть документ: адрес сменён / право зарегистрировано в Росреестре ХО ·
       🟡 регистрация приостановлена · 🔴 отказ · ⚪ документа пока нет.
       Клик по строке — переход к участку на карте.
+      <br>🏛 строка ФИАС — из официальной выгрузки ГАР (с. Бухта, 15.07.2026): ID адреса, ОКТМО, дата внесения, № постановления о присвоении адреса.
     </div>
     <div class="info-tools">
-      <input id="info-search" type="text" placeholder="фильтр: адрес, владелец, кадастр…" autocomplete="off">
+      <input id="info-search" type="text" placeholder="фильтр: адрес, владелец, кадастр, ID ФИАС…" autocomplete="off">
       <button class="chip on" data-f="all">Все<span class="n"></span></button>
       <button class="chip" data-f="ok">🟢 Готово<span class="n"></span></button>
       <button class="chip" data-f="stop">🟡 Приостановка<span class="n"></span></button>
@@ -1126,7 +1133,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.50';
+const BUILD_VERSION = '5.51';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -2253,7 +2260,7 @@ document.getElementById('stats-modal').addEventListener('click', e => { if (e.ta
 // Статус: dst='deny' → 🔴 отказ, dst='stop' → 🟡 приостановка, rr → 🟢 документ есть, иначе ⚪.
 // Причина отказа/приостановки — в поле dwhy; для ⚪ подставляется note из registrations.json → pending.
 const ST_COLOR = { ok: '#2ecc71', stop: '#e8c547', deny: '#e23b3b', none: '#7a7a7a' };
-let REG_DATA = null, INFO_ROWS = null, INFO_FILTER = 'all';
+let REG_DATA = null, GAR_DATA = null, INFO_ROWS = null, INFO_FILTER = 'all';
 
 const streetOf = f => ((f || '').match(/улица\s+([^,]+)/i) || [, ''])[1].trim();
 const houseNo = f => {                       // [номер, подномер] для сортировки внутри улицы
@@ -2266,21 +2273,23 @@ function infoObjects() {
   const c = COUNCILS.find(x => x.code === '2320355400');
   const ps = (c && c.parcels) || [];
   const ub = (c && c.unbound) || [];   // дома без привязки к укр. участку
+  const gar = (GAR_DATA && GAR_DATA.objects) || {};   // атрибуты из офиц. выгрузки ГАР (ID ФИАС, ОКТМО, …)
   const rows = [];
   ps.filter(p => p.fias).forEach(p => {
     const street = streetOf(p.fias), num = houseNo(p.fias);
     rows.push({ kind: 'земля', bld: false, street, num, addr: p.fias, o: p.o || '—',
       size: `${p.a} га · ${Math.round(p.a * 1e4)} м²`, rf: p.cadrf || '', uk: p.c,
       target: p.c, st: statusOf(p), why: p.dwhy || '', post: p.post || '',
-      kuvd: p.dkuvd || '', until: p.duntil || '' });
+      kuvd: p.dkuvd || '', until: p.duntil || '', g: gar[p.c] || null });
     // часть литер в базе уже записана как «здание 12» — второй раз слово не добавляем
     (p.blds || []).forEach(b => rows.push({ kind: 'здание', bld: true, street, num, addr:
       (street ? `улица ${street}, ` : '') + (/^здание\s/i.test(b.lit) ? b.lit : `здание ${b.lit}`),
-      o: p.o || '—', size: b.area || '', rf: b.cad || '', uk: '', target: p.c, st: statusOf(b), why: b.dwhy || '' }));
+      o: p.o || '—', size: b.area || '', rf: b.cad || '', uk: '', target: p.c, st: statusOf(b), why: b.dwhy || '',
+      g: gar[p.c + '#' + b.lit] || null }));
   });
   ub.forEach(u => rows.push({ kind: 'здание', bld: true, street: streetOf(u.fias), num: houseNo(u.fias),
     addr: u.fias || u.bname || '', o: u.o || '—', size: u.area || '', rf: u.cad || '', uk: '',
-    target: null, st: statusOf(u), why: u.dwhy || '', note: u.note || 'на карте не показан: укр. участок не определён' }));
+    target: null, st: statusOf(u), why: u.dwhy || '', note: u.note || 'на карте не показан: укр. участок не определён', g: null }));
   rows.sort((a, b) => a.street.localeCompare(b.street, 'ru')
     || a.num[0] - b.num[0] || a.num[1] - b.num[1] || a.bld - b.bld);
   return rows;
@@ -2317,7 +2326,15 @@ function renderInfo() {
     const head = r.kuvd
       ? `${r.st === 'stop' ? `Приостановлено${r.until ? ` до ${r.until}` : ''}` : 'Отказ'} · ${r.kuvd}`
       : '';
-    const hay = [r.addr, r.o, r.rf, r.uk, r.kuvd, why].join(' ').toLowerCase();
+    const g = r.g;
+    // строка ФИАС/ГАР: ID адреса, ОКТМО, дата внесения, постановление о присвоении адреса
+    const fiasLine = g ? `<div class="info-fias">🏛 <span class="lbl">ФИАС</span> <span class="gid">${esc(g.fid)}</span>${COPY_BTN(g.fid)}`
+      + (g.oktmo ? ` · <span class="lbl">ОКТМО</span> ${esc(g.oktmo)}` : '')
+      + (g.gdate ? ` · <span class="lbl">в ГАР с</span> ${esc(g.gdate)}` : '')
+      + (g.doc ? ` · <span class="lbl">постановление №</span>${esc(g.doc)}${g.ddate ? ' от ' + esc(g.ddate) : ''}` : '')
+      + (g.status && g.status !== 'Актуальная' ? ` · <span class="stwarn">${esc(g.status)}</span>` : '')
+      + `</div>` : '';
+    const hay = [r.addr, r.o, r.rf, r.uk, r.kuvd, why, g && g.fid, g && g.oktmo, g && g.doc].join(' ').toLowerCase();
     html += `<div class="info-row${r.bld ? ' bld' : ''}" style="--st:${ST_COLOR[r.st]}${r.target ? '' : ';cursor:default'}"
         data-target="${esc(r.target || '')}" data-hay="${esc(hay)}">
       <div class="info-addr" title="${esc(r.addr)}"><i class="dot"></i>${esc(shortAddr)}<span class="kind">${r.kind}</span></div>
@@ -2331,6 +2348,7 @@ function renderInfo() {
       ${head ? `<div class="info-why" style="font-weight:600">${esc(head)}</div>` : ''}
       ${why ? `<div class="info-why dim">${esc(why)}</div>` : ''}
       ${r.note ? `<div class="info-why dim">${esc(r.note)}</div>` : ''}
+      ${fiasLine}
     </div>`;
   });
   document.getElementById('info-body').innerHTML = html;
@@ -2357,10 +2375,16 @@ function applyInfoSearch() {
 async function showInfo() {
   document.getElementById('info-modal').classList.add('open');
   const body = document.getElementById('info-body');
-  if (!REG_DATA) {
+  if (!REG_DATA || !GAR_DATA) {
     body.innerHTML = '<div class="info-empty">Загрузка…</div>';
-    try { REG_DATA = await (await fetch(`registrations.json?v=${BUILD_VERSION}`)).json(); }
-    catch (e) { REG_DATA = { owners: [], pending: [] }; }   // без номеров регистрации список всё равно строим
+    if (!REG_DATA) {
+      try { REG_DATA = await (await fetch(`registrations.json?v=${BUILD_VERSION}`)).json(); }
+      catch (e) { REG_DATA = { owners: [], pending: [] }; }   // без номеров регистрации список всё равно строим
+    }
+    if (!GAR_DATA) {
+      try { GAR_DATA = await (await fetch(`gar.json?v=${BUILD_VERSION}`)).json(); }
+      catch (e) { GAR_DATA = { objects: {} }; }   // без ГАР-выгрузки список тоже строим, просто без строки ФИАС
+    }
   }
   INFO_ROWS = infoObjects();
   renderInfo();
