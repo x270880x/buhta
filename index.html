@@ -1069,7 +1069,7 @@ function buildParcelPopup(cad, data, council) {
       ${data.o ? `<div><b style="color:#aaa">владелец:</b> ${escapeHtml(data.o)}</div>` : ''}
       ${data.r ? `<div><b style="color:#aaa">аренд.:</b> ${escapeHtml(data.r)}</div>` : ''}
       ${data.ed ? `<div><b style="color:#aaa">договор до:</b> <span style="color:${expColor}">${escapeHtml(data.ed)}</span>${data.cn?` · №${escapeHtml(data.cn)}`:''}</div>` : ''}
-      ${data.cadrf ? `<div style="margin-top:4px"><span title="есть РФ-кадастр">🇷🇺</span> <b style="color:#aaa">кадастровый РФ:</b> <span style="font-family:'IBM Plex Mono',monospace;color:#e8c547">${escapeHtml(data.cadrf)}</span>${COPY_BTN(data.cadrf)}</div>` : ''}
+      ${data.cadrf ? `<div style="margin-top:4px"><span title="есть РФ-кадастр">🇷🇺</span> <b style="color:#aaa">кадастровый РФ:</b> <span style="font-family:'IBM Plex Mono',monospace;color:${data.rr ? '#2ecc71' : '#e8c547'}"${data.rr ? ' title="собственность зарегистрирована"' : ''}>${escapeHtml(data.cadrf)}</span>${COPY_BTN(data.cadrf)}</div>` : ''}
       ${data.egrn ? `<div style="color:#4caf7d;font-weight:600;margin-top:2px">✓ оформлен ЕГРН${(typeof data.egrn==='string' && data.egrn && data.egrn!=='да') ? ` · ${escapeHtml(data.egrn)}` : ''}</div>` : ''}
       ${data.fias ? `<div style="margin-top:4px"><b style="color:#aaa">адрес РФ:</b> с. Бухта, ${escapeHtml(data.fias)}</div>` : ''}
       ${data.rr && !data.dst ? `<div style="color:#2ecc71;font-weight:600;margin-top:2px">🟢 Зарегистрирован в Росреестре (Херсонская обл.)</div>` : ''}
@@ -1126,7 +1126,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.46';
+const BUILD_VERSION = '5.47';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1952,7 +1952,7 @@ function renderSearchResults(results) {
       <div class="item" data-i="${i}">
         <div class="cad">${escapeHtml(r.p.c)}${r.p.fias ? (r.p.rr ? ' 🟢' : ' 🚩') : ''}</div>
         <div class="who">${r.p.o? escapeHtml(r.p.o.slice(0,40)) : escapeHtml(r.council.name)}${znDisp(r.p.zn)? ' · '+escapeHtml(znDisp(r.p.zn)):''}</div>
-        ${r.p.fias ? `<div class="who" style="color:#e8c547">📍 с. Бухта, ${escapeHtml(r.p.fias)}${r.p.building?' · зд. '+escapeHtml(r.p.building):''}</div>` : ''}${r.p.cadrf ? `<div class="who" style="font-family:'IBM Plex Mono',monospace;color:#5bb8ff">🇷🇺 ${escapeHtml(r.p.cadrf)}</div>` : ''}
+        ${r.p.fias ? `<div class="who" style="color:#e8c547">📍 с. Бухта, ${escapeHtml(r.p.fias)}${r.p.building?' · зд. '+escapeHtml(r.p.building):''}</div>` : ''}${r.p.cadrf ? `<div class="who" style="font-family:'IBM Plex Mono',monospace;color:${r.p.rr ? '#2ecc71' : '#5bb8ff'}">🇷🇺 ${escapeHtml(r.p.cadrf)}</div>` : ''}
       </div>`;
   }).join('');
   sr.style.display = 'block';
@@ -1994,7 +1994,7 @@ function renderRecent() {
     <div class="recent-item" data-cad="${r.cad}" style="padding:6px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;margin-bottom:4px;cursor:pointer">
       <div style="font-family:'IBM Plex Mono',monospace;color:var(--accent);font-size:10px;word-break:break-all">${r.cad}${r.egrn ? ' <span style="color:#4caf7d">✓ЕГРН</span>' : ''}</div>
       <div style="color:#d8dce8;font-size:10px;margin-top:2px">${r.area} га${znDisp(r.zn) ? ' · ' + esc(znDisp(r.zn)) : ''}</div>
-      ${r.cadrf ? `<div style="font-family:'IBM Plex Mono',monospace;color:#5bb8ff;font-size:10px;margin-top:1px;word-break:break-all">РФ: ${esc(r.cadrf)}</div>` : ''}
+      ${r.cadrf ? `<div style="font-family:'IBM Plex Mono',monospace;color:${r.rr ? '#2ecc71' : '#5bb8ff'};font-size:10px;margin-top:1px;word-break:break-all">РФ: ${esc(r.cadrf)}</div>` : ''}
       ${r.o ? `<div style="color:var(--muted);font-size:10px;margin-top:1px;word-break:break-word">${esc(r.o)}</div>` : ''}
     </div>
   `).join('');
@@ -2018,7 +2018,7 @@ map.on('popupopen', e => {
   const code = cad.slice(0, 10);
   const council = COUNCILS.find(c => c.code === code);
   const data = council && council.parcels ? council.parcels.find(p => p.c === cad) : null;
-  addRecent({ cad, area: data ? data.a : '?', zn: data ? data.zn : '', o: data ? data.o : '', egrn: data ? !!data.egrn : false, cadrf: data ? (data.cadrf || '') : '' });
+  addRecent({ cad, area: data ? data.a : '?', zn: data ? data.zn : '', o: data ? data.o : '', egrn: data ? !!data.egrn : false, cadrf: data ? (data.cadrf || '') : '', rr: data ? !!data.rr : false });
 });
 
 renderRecent();

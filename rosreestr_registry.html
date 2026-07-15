@@ -200,7 +200,7 @@ function render(){
      </div>
      <div class="grid">
        <div class="field"><small>Дата</small>${esc(i.date_right||i.date_vypiska||i.date_decision||i.date_cadastre||"—")}</div>
-       <div class="field"><small>Кадастр РФ</small><code>${esc(i.cad_rf||"—")}</code></div>
+       <div class="field"><small>Кадастр РФ</small><code style="${i.completed?"color:var(--green);font-weight:700":""}" ${i.completed?'title="собственность зарегистрирована"':''}>${esc(i.cad_rf||"—")}</code></div>
        <div class="field"><small>Предыдущий (укр.)</small><code>${esc(i.cad_prev||"—")}</code></div>
        <div class="field"><small>Площадь</small>${esc(i.area||"—")}</div>
      </div>
