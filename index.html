@@ -438,7 +438,7 @@
     <div><div class="v" id="hstat-filtered">—</div><div class="l">отфильтр. участков</div></div>
     <div><div class="v" id="hstat-filtered-area">—</div><div class="l">отфильтр. га</div></div>
     <button id="stats-btn" title="Статистика по участкам и зданиям">📊 Статистика</button>
-    <button id="info-btn" title="Все адреса ФИАС ХО: владельцы, размеры, кадастры, статус документов">📋 ИНФО</button>
+    <button id="info-btn" title="Все объекты с присвоенным адресом ФИАС (Херсонская обл.): владельцы, размеры, кадастры, статус документов">📋 ФИАС</button>
     <button id="kuvd-btn" title="Все номера КУВД по владельцам, со скачиванием списка">🔢 КУВД</button>
     <a id="reestr-btn" href="rosreestr_registry.html" target="_blank" rel="noopener" title="Реестр документов Росреестра: выписки, кадастровый учёт, регистрация права, приостановки и отказы — с поиском, фильтрами и статистикой">📑 Реестр РР</a>
   </div>
@@ -451,7 +451,7 @@
 </div>
 <div id="info-modal">
   <div class="stats-card">
-    <div class="stats-head"><span>📋 ИНФО — адреса ФИАС Херсонской обл.</span><button id="info-close">×</button></div>
+    <div class="stats-head"><span>📋 ФИАС — объекты с присвоенным адресом (Херсонская обл.)</span><button id="info-close">×</button></div>
     <div class="info-note">
       🟢 есть документ: адрес сменён / право зарегистрировано в Росреестре ХО ·
       🟡 регистрация приостановлена · 🔴 отказ · ⚪ документа пока нет.
@@ -1126,7 +1126,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.45';
+const BUILD_VERSION = '5.46';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
