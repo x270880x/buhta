@@ -431,6 +431,7 @@
     <h1><span class="h-sub">Херсонская обл</span><br><span class="h-sub">Генический р-н</span><br><span class="h-main">с. Бухта</span></h1>
   </div>
   <div class="right">
+    <div id="hstat-kuvd-wrap" onclick="document.getElementById('kuvd-btn').click()" title="Заявлений (КУВД) подано в Росреестр через МФЦ — уникальных номеров. Клик — открыть панель КУВД." style="cursor:pointer"><div class="v" id="hstat-kuvd">—</div><div class="l">сдано в Росреестр (КУВД)</div></div>
     <div><div class="v" id="hstat-parcels">0</div><div class="l">участков</div></div>
     <div><div class="v" id="hstat-area">0</div><div class="l">га</div></div>
     <div><div class="v" id="hstat-councils">0</div><div class="l">сельсоветов</div></div>
@@ -1125,7 +1126,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.44';
+const BUILD_VERSION = '5.45';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -2642,7 +2643,7 @@ function fitStartView() {
 // Автоподгрузка контуров совета на старте + применить фильтр после загрузки
 // 0 вместо 100 мс: скрипт в конце body, размеры контейнера уже есть, fitStartView сам ждёт ненулевой размер
 // Предзагружаем КУВД до контуров, чтобы авто-история в попапах была наполнена сразу
-setTimeout(() => loadKuvd().then(() => loadCouncilPolygons('2320355400')).then(() => { applyEgrnFilter(); fitStartView(); }), 0);
+setTimeout(() => loadKuvd().then((k) => { if (k && k.итого) document.getElementById('hstat-kuvd').textContent = k.итого.уникальных; return loadCouncilPolygons('2320355400'); }).then(() => { applyEgrnFilter(); fitStartView(); }), 0);
 // Если хочешь видеть всю карту — раскомментируй ниже:
 // const bounds = L.latLngBounds(COUNCILS.filter(c=>c.lat).map(c=>[c.lat,c.lon]));
 // map.fitBounds(bounds, { padding: [40, 40] });
