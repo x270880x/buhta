@@ -111,10 +111,11 @@ function buildStats(){
    +card((st["Право зарегистрировано"]||0),"право зарегистрировано","g")
    +card((st["Приостановка"]||0),"приостановлено","y")
    +card((st["Отказ"]||0),"отказов","r");
+ const unit=`<span style="font-size:13px;color:var(--muted);font-weight:400"> докум.</span>`;
  document.getElementById("cats").innerHTML=
-   `<div class="cat b"><div class="lbl" style="color:var(--green)">Право зарегистрировано</div><b style="color:var(--green)">${cB}</b><div class="desc">Сдавали на регистрацию в Росреестре — и получили зарегистрированное право (собственность).</div></div>`
-  +`<div class="cat c"><div class="lbl" style="color:var(--yellow)">Только кадастровый учёт</div><b style="color:var(--yellow)">${cC}</b><div class="desc">Сдавали на регистрацию — но по документу получен только кадастровый учёт, права ещё нет.</div></div>`
-  +`<div class="cat a"><div class="lbl" style="color:var(--blue)">Сведения внесены (адрес)</div><b style="color:var(--blue)">${cA}</b><div class="desc">Сдавали на новый адрес / внесение сведений — сведения об адресе внесены.</div></div>`;
+   `<div class="cat b"><div class="lbl" style="color:var(--green)">Право зарегистрировано</div><b style="color:var(--green)">${cB}</b>${unit}<div class="desc">Сдавали на регистрацию в Росреестре — и получили зарегистрированное право (собственность).</div></div>`
+  +`<div class="cat c"><div class="lbl" style="color:var(--yellow)">Только кадастровый учёт</div><b style="color:var(--yellow)">${cC}</b>${unit}<div class="desc">Сдавали на регистрацию — но по документу получен только кадастровый учёт, права ещё нет.</div></div>`
+  +`<div class="cat a"><div class="lbl" style="color:var(--blue)">Сведения внесены (адрес)</div><b style="color:var(--blue)">${cA}</b>${unit}<div class="desc">Сдавали на новый адрес / внесение сведений — сведения об адресе внесены.</div></div>`;
  // breakdowns
  const mkbars=(title,obj,colorFn)=>{
    const entries=Object.entries(obj).sort((a,b)=>b[1]-a[1]);const max=Math.max(1,...entries.map(e=>e[1]));
