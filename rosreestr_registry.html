@@ -116,13 +116,16 @@ function buildStats(){
  const comp=records.filter(r=>r.completed).length;
  const comp94=records.filter(r=>r.completed&&/^94:/.test(r.cad_rf||"")).length;
  const comp96=comp-comp94;
+ const gm={};records.forEach(r=>{(gm[r.group]=gm[r.group]||[]).push(r)});
+ const gfull=Object.values(gm).filter(a=>a.every(r=>r.completed)).length;
  document.getElementById("completed-box").innerHTML=`<div style="background:#ecfdf3;border:1px solid #a7f3d0;border-left:5px solid var(--green);border-radius:14px;padding:14px 16px;margin-bottom:14px">
-   <div style="font-size:16px;font-weight:700;color:var(--green)">✅ Полностью оформлено — ${comp} <span style="color:var(--muted);font-weight:400;font-size:13px">объектов (право собственности + адрес в Херсонской обл.)</span></div>
+   <div style="font-size:16px;font-weight:700;color:var(--green)">✅ Полностью оформлено — ${comp} из ${total} <span style="color:var(--muted);font-weight:400;font-size:13px">документов (право собственности + адрес в Херсонской обл.)</span></div>
    <div style="font-size:13.5px;margin-top:7px;line-height:1.65">
      🟩 право получено сразу в Херсоне (кадастр <code>94:</code>): <b>${comp94}</b><br>
      🟦 был в собственности + адрес сменён с Запорожской на Херсонскую (кадастр <code>96:</code>): <b>${comp96}</b>
    </div>
-   <div style="color:var(--muted);font-size:12px;margin-top:6px">Завершённый процесс: и право зарегистрировано, и адрес уже херсонский. Отфильтровать — «✅ Завершено» в списке статусов.</div></div>`;
+   <div style="color:var(--muted);font-size:12.5px;margin-top:7px;line-height:1.55">Дел закрыто полностью: <b>${gfull}</b> из ${groups}. Остальные <b>${total-comp}</b> документов — ещё в процессе: отказ ${st["Отказ"]||0} · только учёт ${st["Только кадастровый учёт"]||0} · сведения внесены ${st["Сведения внесены"]||0} · приостановка ${st["Приостановка"]||0}.</div>
+   <div style="color:var(--muted);font-size:12px;margin-top:5px">Отфильтровать завершённые — «✅ Завершено» в списке статусов.</div></div>`;
  const unit=`<span style="font-size:13px;color:var(--muted);font-weight:400"> докум.</span>`;
  document.getElementById("cats").innerHTML=
    `<div class="cat b"><div class="lbl" style="color:var(--green)">Право зарегистрировано</div><b style="color:var(--green)">${cB}</b>${unit}<div class="desc">Сдавали на регистрацию в Росреестре — и получили зарегистрированное право (собственность).</div></div>`
