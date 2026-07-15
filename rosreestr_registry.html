@@ -115,7 +115,7 @@ function buildStats(){
  document.getElementById("cats").innerHTML=
    `<div class="cat b"><div class="lbl" style="color:var(--green)">Право зарегистрировано</div><b style="color:var(--green)">${cB}</b>${unit}<div class="desc">Сдавали на регистрацию в Росреестре — и получили зарегистрированное право (собственность).</div></div>`
   +`<div class="cat c"><div class="lbl" style="color:var(--yellow)">Только кадастровый учёт</div><b style="color:var(--yellow)">${cC}</b>${unit}<div class="desc">Сдавали на регистрацию — но по документу получен только кадастровый учёт, права ещё нет.</div></div>`
-  +`<div class="cat a"><div class="lbl" style="color:var(--blue)">Сведения внесены (адрес)</div><b style="color:var(--blue)">${cA}</b>${unit}<div class="desc">Сдавали на новый адрес / внесение сведений — сведения об адресе внесены.</div></div>`;
+  +`<div class="cat a"><div class="lbl" style="color:var(--blue)">Сведения внесены (МВВ)</div><b style="color:var(--blue)">${cA}</b>${unit}<div class="desc">Отдельные уведомления МВВ о внесении сведений (адрес). Это НЕ все смены адреса — большинство смен видно по кадастру <code>96:</code> (блок «Смена адреса» ниже).</div></div>`;
  // breakdowns
  const mkbars=(title,obj,colorFn)=>{
    const entries=Object.entries(obj).sort((a,b)=>b[1]-a[1]);const max=Math.max(1,...entries.map(e=>e[1]));
@@ -126,15 +126,15 @@ function buildStats(){
    `<div style="display:grid;grid-template-columns:1fr 1fr;gap:22px" class="bd2">`
    +`<div>${mkbars("По статусу",st,stColor)}
      <div style="margin-top:6px;color:var(--muted);font-size:12.5px">Отказов ${st["Отказ"]||0}: ранее учтённых <b style="color:var(--red)">${records.filter(r=>r.status==="Отказ"&&!r.is_mvv).length}</b> · по МВВ (в ФИАС нет адреса) <b style="color:var(--red)">${records.filter(r=>r.status==="Отказ"&&r.is_mvv).length}</b></div>
-     <h3 style="margin-top:14px">Регион кадастрового номера</h3>
+     <h3 style="margin-top:14px">Смена адреса на Херсонскую область (по округу кадастра)</h3>
      <div style="font-size:13px;line-height:1.7">
-       <div>🟩 Херсонский <code>94:…</code> — <b>${reg94}</b></div>
-       <div>🟦 Запорожский <code>96:…</code> — <b>${reg96}</b></div>
-       <div style="padding-left:20px;color:var(--muted)">↳ адрес уже сменён на Херсонскую (ХО): <b style="color:var(--green)">${reg96ho}</b></div>
-       <div style="padding-left:20px;color:var(--muted)">↳ адрес пока не сменён (отказ/ранее учтён): <b style="color:var(--red)">${reg96zap}</b></div>
-       ${nocad?`<div>⬜ без РФ-кадастра (приостановка) — <b>${nocad}</b></div>`:""}
+       <div>🟩 Сразу в Херсоне — кадастр <code>94:…</code> — <b>${reg94}</b> <span style="color:var(--muted)">новые, адрес в Херсонском округе</span></div>
+       <div>🟦 Сменено с Запорожской на Херсонскую — кадастр <code>96:…</code> — <b>${reg96}</b></div>
+       <div style="padding-left:20px;color:var(--muted)">↳ смена завершена (адрес уже херсонский): <b style="color:var(--green)">${reg96ho}</b></div>
+       <div style="padding-left:20px;color:var(--muted)">↳ пока отказ во внесении (не завершено): <b style="color:var(--red)">${reg96zap}</b></div>
+       ${nocad?`<div>⬜ приостановка (в документе нет завершённого РФ-кадастра) — <b>${nocad}</b></div>`:""}
      </div>
-     <div style="margin-top:6px;color:var(--muted);font-size:12px">Номер <code>96:</code> присвоен при запорожской регистрации (Мелитополь/Кирилловка); <code>94:</code> — при херсонской. Смена адреса на ХО кадастровый номер не меняет.</div></div>`
+     <div style="margin-top:6px;color:var(--muted);font-size:12px"><b>Итого адрес сменён с Запорожской на Херсонскую: ${reg96} объектов</b> (завершено ${reg96ho}). Номер <code>96:</code> присвоен при запорожской регистрации — смена адреса на ХО его не меняет; <code>94:</code> — сразу в Херсоне. «Сведения внесены» (${records.filter(r=>r.status==="Сведения внесены").length}) — это лишь отдельные уведомления МВВ (подмножество), а не все смены.</div></div>`
    +`<div>${mkbars("По улицам",by("street"))}${mkbars("По владельцам",records.reduce((m,r)=>{const v=r.owner_short||r.owner||"—";m[v]=(m[v]||0)+1;return m},{}))}</div>`
    +`</div>`;
 }
