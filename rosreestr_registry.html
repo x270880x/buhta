@@ -24,7 +24,9 @@ header{background:#17202a;color:#fff;padding:26px 24px} header h1{margin:0 0 6px
 .cat b{display:block;font-size:22px} .cat .lbl{font-weight:700;margin-bottom:2px} .cat .desc{color:var(--muted);font-size:12.5px;margin-top:4px}
 .cat.a{border-left:5px solid var(--blue)} .cat.b{border-left:5px solid var(--green)} .cat.c{border-left:5px solid var(--yellow)}
 .note{background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:12px 15px;margin:0 0 16px;font-size:14px}
-.controls{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:10px;margin-bottom:16px;position:sticky;top:0;background:var(--bg);padding:10px 0;z-index:5}
+.controls{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr auto;gap:10px;margin-bottom:16px;position:sticky;top:0;background:var(--bg);padding:10px 0;z-index:5}
+#toggle-all{padding:10px 14px;border:1px solid #bfc7d1;border-radius:10px;background:#fff;font-size:13.5px;cursor:pointer;white-space:nowrap;color:var(--blue);font-weight:600}
+#toggle-all:hover{background:#eef4ff}
 input,select{width:100%;padding:10px 12px;border:1px solid #bfc7d1;border-radius:10px;background:#fff;font-size:14px}
 .countline{color:var(--muted);font-size:13px;margin:-6px 0 14px}
 .group{background:var(--card);border:2px solid #cbd5e1;border-radius:16px;margin:0 0 16px;overflow:hidden;box-shadow:0 2px 8px rgba(16,24,40,.05)}
@@ -43,6 +45,18 @@ input,select{width:100%;padding:10px 12px;border:1px solid #bfc7d1;border-radius
 .badge{padding:4px 9px;border-radius:999px;font-weight:700;font-size:12px;background:#eef4ff;color:var(--blue)} .badge.ok{background:#ecfdf3;color:var(--green)} .badge.warn{background:#fffaeb;color:var(--yellow)} .badge.bad{background:#fef3f2;color:var(--red)}
 .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 14px;margin:9px 0} .field small{display:block;color:var(--muted);font-size:11.5px} code{font-size:13px}
 .details{background:#f8fafc;border-radius:9px;padding:9px 11px} .source{margin-top:7px;color:var(--muted);font-size:12.5px}
+/* сворачиваемое описание документа: шапка видна всегда, длинный текст — по клику */
+details.details{padding:0}
+details.details>summary{list-style:none;cursor:pointer;padding:9px 11px;border-radius:9px;display:flex;gap:8px;align-items:flex-start}
+details.details>summary::-webkit-details-marker{display:none}
+details.details>summary:hover{background:#eef2f7}
+details.details>summary .caret{color:var(--muted);font-size:11px;line-height:1.5;transition:transform .15s;flex:0 0 auto}
+details.details[open]>summary .caret{transform:rotate(90deg)}
+details.details>summary .sumtxt{flex:1 1 auto;min-width:0}
+details.details>summary .more{color:var(--muted);font-size:11.5px;white-space:nowrap;flex:0 0 auto}
+details.details[open]>summary .more{opacity:.55}
+details.details .dbody{padding:0 11px 10px 27px;font-size:13px}
+details.details .dbody .dtext{margin-bottom:6px}
 .hidden{display:none!important}
 footer{color:var(--muted);padding:10px 0 25px;font-size:13px}
 @media(max-width:900px){.summary{grid-template-columns:repeat(2,1fr)}.cats{grid-template-columns:1fr}.controls{grid-template-columns:1fr 1fr}.grid{grid-template-columns:repeat(2,1fr)}.bar{grid-template-columns:150px 1fr 40px}}
@@ -77,6 +91,7 @@ footer{color:var(--muted);padding:10px 0 25px;font-size:13px}
  <option value="date">Дата (новые сверху)</option>
  <option value="cad">Кадастр РФ</option>
 </select>
+<button id="toggle-all" type="button" title="Развернуть или свернуть описания всех документов">▶ Развернуть всё</button>
 </div>
 <div class="countline" id="countline"></div>
 <div id="app"></div>
@@ -208,15 +223,33 @@ function render(){
        <div class="field"><small>Предыдущий (укр.)</small><code>${esc(i.cad_prev||"—")}</code></div>
        <div class="field"><small>Площадь</small>${esc(i.area||"—")}</div>
      </div>
-     <div class="details"><b>${esc(i.kind||i.status)}</b>${i.right_type?` · ${esc(i.right_type)}${i.right_share?` (${esc(i.right_share)})`:""}`:""}${i.otkaz_type?` · <span style="color:var(--red)">${esc(i.otkaz_type)}</span>`:""}${i.status==="Сведения внесены"&&i.is_mvv?` · <span style="color:var(--blue)">в порядке МВВ (межвед. взаимодействие с ФИАС)</span>`:""}<br>${esc(i.details||"")}${i.reg_number?`<br><span style="color:var(--muted)">Запись о праве: <code>${esc(i.reg_number)}</code></span>`:""}${i.kuvd?`<br><span style="color:var(--muted)">КУВД: ${esc(i.kuvd)}</span>`:""}${i.suspended_until?`<br><span style="color:var(--yellow)">Приостановлено до ${esc(i.suspended_until)}</span>`:""}${i.reconciled?`<br><span style="color:var(--muted);font-style:italic">↳ ${esc(i.reconciled)}</span>`:""}</div>
-     <div class="source">Источник: ${esc((i.sources&&i.sources.length?i.sources:[i.file||i.source]).filter(Boolean).join(" · "))}</div>
+     <details class="details">
+       <summary><span class="caret">▶</span><span class="sumtxt"><b>${esc(i.kind||i.status)}</b>${i.right_type?` · ${esc(i.right_type)}${i.right_share?` (${esc(i.right_share)})`:""}`:""}${i.otkaz_type?` · <span style="color:var(--red)">${esc(i.otkaz_type)}</span>`:""}${i.status==="Сведения внесены"&&i.is_mvv?` · <span style="color:var(--blue)">в порядке МВВ (межвед. взаимодействие с ФИАС)</span>`:""}${i.suspended_until?` · <span style="color:var(--yellow)">приостановлено до ${esc(i.suspended_until)}</span>`:""}</span><span class="more">подробнее</span></summary>
+       <div class="dbody">
+         ${i.details?`<div class="dtext">${esc(i.details)}</div>`:""}
+         ${i.reg_number?`<div style="color:var(--muted)">Запись о праве: <code>${esc(i.reg_number)}</code></div>`:""}
+         ${i.kuvd?`<div style="color:var(--muted)">КУВД: ${esc(i.kuvd)}</div>`:""}
+         ${i.reconciled?`<div style="color:var(--muted);font-style:italic">↳ ${esc(i.reconciled)}</div>`:""}
+         <div class="source">Источник: ${esc((i.sources&&i.sources.length?i.sources:[i.file||i.source]).filter(Boolean).join(" · "))}</div>
+       </div>
+     </details>
    </article>`).join("")}</div>`;
    app.appendChild(el);
  });
  document.getElementById("countline").textContent=`Показано: ${docn} документ(ов), сгруппировано по ${groups.length} адресам (участок + его здания вместе)`;
  if(!groups.length)app.innerHTML='<div class="note">По заданным фильтрам ничего не найдено.</div>';
 }
-["q","status","owner","street","sort"].forEach(id=>document.getElementById(id).addEventListener("input",render));
-buildStats();render();
+// Развернуть/свернуть описания всех документов. render() пересобирает карточки,
+// поэтому состояние EXPAND_ALL применяем заново после каждой отрисовки.
+let EXPAND_ALL=false;
+function applyExpandAll(){
+ document.querySelectorAll("details.details").forEach(d=>{d.open=EXPAND_ALL});
+ document.getElementById("toggle-all").textContent=EXPAND_ALL?"▼ Свернуть всё":"▶ Развернуть всё";
+}
+function renderAll(){render();applyExpandAll()}
+document.getElementById("toggle-all").addEventListener("click",()=>{EXPAND_ALL=!EXPAND_ALL;applyExpandAll()});
+["q","status","owner","street","sort"].forEach(id=>document.getElementById(id).addEventListener("input",renderAll));
+
+buildStats();renderAll();
 </script>
 </body></html>
