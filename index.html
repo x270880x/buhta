@@ -1133,7 +1133,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.62';
+const BUILD_VERSION = '5.63';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -1903,35 +1903,50 @@ search.addEventListener('input', e => {
     return;
   }
   // Free text — search across loaded councils (partial coverage)
+  // Номер дома/участка из fias («…земельный участок 7» → «7», «…здание 51, строение Б» → «51 б»)
+  const parcelNum = p => {
+    const src = (p.fias || '') + ' ' + (p.building || '');
+    const m = src.toLowerCase().match(/(?:участок|здание|дом)\s+([0-9]+(?:[/][0-9]+)?)\s*(?:,?\s*строение\s*([а-я]))?/);
+    if (!m) return '';
+    return (m[1] + (m[2] ? ' ' + m[2] : '')).trim();
+  };
+  const isNumTok = t => /^[0-9]+([/][0-9]+)?[а-я]?$/.test(t);
   const textResults = qstr => {
     const ql = qstr.toLowerCase();
-    const tokens = ql.split(/[\s,]+/).filter(Boolean); // «набережная 76» → [набережная, 76]
+    const tokens = ql.split(/[\s,]+/).filter(Boolean); // «утлюкская 7» → [утлюкская, 7]
     if (!tokens.length) return [];
+    const numToks = tokens.filter(isNumTok);
+    const txtToks = tokens.filter(t => !isNumTok(t));
     const results = [];
     for (const c of COUNCILS) {
-      // Search council name
-      if (c.name.toLowerCase().includes(ql)) {
-        results.push({ type: 'council', council: c });
-        if (results.length >= 50) break;
-      }
-      // Search loaded parcels (those councils that user already opened)
-      if (c.parcels) {
-        for (const p of c.parcels) {
-          // Адресный/именной текст (без кадастров — чтобы число «76» не ловило кадастр :276)
-          const hay = [p.o, p.r, p.ad, p.fias, p.zn, p.building]
-            .filter(Boolean).join(' ').toLowerCase();
-          // кадастры матчим только длинными токенами (содержат ':' или длиннее 5 символов)
-          const cadHay = [p.cadrf, bldCads(p), p.c].filter(Boolean).join(' ').toLowerCase();
-          const hit = tokens.every(t => hay.includes(t) || ((t.includes(':') || t.length > 5) && cadHay.includes(t)));
-          if (hit) {
-            results.push({ type: 'parcel', p, council: c });
-            if (results.length >= 50) break;
-          }
+      if (c.name.toLowerCase().includes(ql)) results.push({ type: 'council', council: c, _score: 0 });
+      if (!c.parcels) continue;
+      for (const p of c.parcels) {
+        // Адресный/именной текст (без кадастров — чтобы число «76» не ловило кадастр :276)
+        const hay = [p.o, p.r, p.ad, p.fias, p.zn, p.building].filter(Boolean).join(' ').toLowerCase();
+        const cadHay = [p.cadrf, bldCads(p), p.c].filter(Boolean).join(' ').toLowerCase();
+        // Все текстовые токены (улица/имя) обязаны присутствовать
+        const txtOk = txtToks.every(t => hay.includes(t) || ((t.includes(':') || t.length > 5) && cadHay.includes(t)));
+        if (!txtOk) continue;
+        // Числовые токены (номер дома) — сверяем с номером участка ТОЧНО, иначе слабее
+        const pnum = parcelNum(p);
+        let score = 0, numOk = true;
+        for (const t of numToks) {
+          const tn = t.replace(/([а-я])$/, ' $1').trim(); // «51б» → «51 б»
+          if (pnum && (pnum === tn || pnum === t)) score += 1000;            // точное совпадение дома
+          else if (pnum && pnum.split(/[ /]/)[0] === t) score += 200;        // тот же дом, др. литера/дробь («7» ↔ «7 б»/«7/1»)
+          else if (hay.includes(t)) score += 1;                              // подстрока где-то (подстраховка)
+          else { numOk = false; break; }
         }
-        if (results.length >= 50) break;
+        if (!numOk) continue;
+        if (txtToks.length && pnum) score += 5;      // адрес есть — выше «голых» совпадений
+        if (p.fias) score += 3;
+        if (p.rr === 'да') score += 2;
+        results.push({ type: 'parcel', p, council: c, _score: score });
       }
     }
-    return results;
+    results.sort((a, b) => b._score - a._score);   // самое релевантное — первым
+    return results.slice(0, 50);
   };
   let results = textResults(q);
   // Ничего не нашли, а в запросе есть латиница? Возможно, забыли переключить
