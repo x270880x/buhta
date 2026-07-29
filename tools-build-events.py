@@ -135,13 +135,27 @@ STATUS_KINDS = ('right', 'mvv', 'cad', 'stop', 'deny', 'return')
 RANK = {'right': 5, 'mvv': 4, 'cad': 3, 'stop': 2, 'deny': 2, 'return': 2}
 out = {}
 for uk, evs in events.items():
-    seen, uniq = set(), []
+    # Дедупликация: одно событие часто приходит из двух источников (реестр документов и
+    # registrations.json). Схлопываем по дате + виду + кадастру объекта, склеивая описания.
+    def cad_of(e):
+        m = re.search(r'9[46]:\d{2}:\d{6,7}:\d{1,5}', e['s'] or '')
+        return m.group(0) if m else (e['lit'] or e['o'])
+    merged = {}
     for e in sorted(evs, key=lambda e: (e['n'] or 99999999, ORDER.get(e['k'], 9))):
-        key = (e['d'], e['k'], e['s'][:60], e['lit'])
-        if key in seen:
+        key = (e['d'], e['k'], cad_of(e))
+        if key in merged:
+            prev = merged[key]
+            extra = [part.strip() for part in e['s'].split(' · ')
+                     if part.strip() and part.strip() not in prev['s']]
+            # из второго источника берём только то, чего нет: номер записи о праве, доля и т.п.
+            keep = [x for x in extra if not x.startswith(('Херсонская', 'Российская'))][:2]
+            if keep:
+                prev['s'] = ' · '.join(filter(None, [prev['s'], *keep]))[:300]
+            if not prev['lit'] and e['lit']:
+                prev['lit'] = e['lit']
             continue
-        seen.add(key)
-        uniq.append(e)
+        merged[key] = dict(e)
+    uniq = list(merged.values())
     dated = [e for e in uniq if e['n']]
     st = [e for e in dated if e['k'] in STATUS_KINDS]
     # фактическое состояние — сильнейшее из достигнутых (право > адрес внесён > кадучёт > стоп/отказ)
