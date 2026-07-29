@@ -969,7 +969,50 @@ function ruDate(s) {
 // Авто-история действий по участку — хронология СОБИРАЕТСЯ из уже имеющихся данных
 // (без отдельного поля): постановка на учёт (ЕГРН/кадастр), постановление об адресе,
 // заявления КУВД (учёт/право), приостановка/отказ Росреестра, регистрация в РР ХО.
+// Вид события в events.json → иконка, цвет, порядок внутри одной даты
+const EV_META = {
+  apply:  ['◻', '#9aa2ab'],
+  addr:   ['📄', '#c9c9c9'],
+  cad:    ['🇷🇺', '#5bb8ff'],
+  mvv:    ['📮', '#5bb8ff'],
+  stop:   ['🟡', '#e8c547'],
+  deny:   ['🔴', '#e23b3b'],
+  return: ['↩️', '#e28b3b'],
+  right:  ['🟢', '#2ecc71'],
+};
+// Хронология из events.json: полная история по участку, включая документы, которые
+// к номеру КУВД не привязываются (выписки ЕГРН номер заявления не печатают).
+function historyFromEvents(data) {
+  const rec = EVENTS && EVENTS[data.c];
+  if (!rec || !rec.events || !rec.events.length) return '';
+  const rows = rec.events.map(e => {
+    const [icon, color] = EV_META[e.k] || ['◻', '#9aa2ab'];
+    const where = e.o === 'здание' ? `здание${e.lit ? ' ' + e.lit : ''}` : '';
+    return `
+    <div style="display:flex;gap:7px;margin-top:5px">
+      <div style="flex:0 0 58px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#7f8794;text-align:right;padding-top:2px">${e.d || '—'}</div>
+      <div style="flex:1 1 auto;min-width:0;border-left:2px solid ${color};padding-left:7px">
+        <div style="color:${color};font-weight:600;font-size:11px;line-height:1.3">${icon} ${escapeHtml(e.t)}${where ? ` <span style="color:#7f8794;font-weight:400">· ${escapeHtml(where)}</span>` : ''}</div>
+        ${e.s ? `<div style="color:#a8adb5;font-size:10px;line-height:1.4;margin-top:1px">${escapeHtml(e.s)}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+  const st = rec.status;
+  const head = st ? `<div style="font-size:10px;color:#7f8794;margin:2px 0 4px">Итог: <b style="color:${(EV_META[st.k] || [])[1] || '#a8adb5'}">${escapeHtml(st.t)}</b>${st.d ? ` · ${st.d}` : ''}</div>` : '';
+  const warn = rec.warn ? `<div style="margin:4px 0 2px;padding:5px 7px;border-left:2px solid #e8c547;background:rgba(232,197,71,.08);font-size:10px;color:#e8c547;line-height:1.4">
+      ⚠️ Позже пришло решение «${escapeHtml(rec.warn.t)}» (${rec.warn.d}) — проверить, к какому объекту относится</div>` : '';
+  return `<div style="margin-top:6px;border:1px solid var(--border);border-radius:4px;overflow:hidden">
+    <div onclick="histToggle(this)" style="cursor:pointer;user-select:none;padding:6px 8px;display:flex;align-items:center;gap:6px;color:var(--accent);font-weight:600">
+      <span class="hchev" style="display:inline-block;transition:transform .15s;font-size:10px">▶</span>
+      <span>📜 История действий · ${rec.events.length}</span>
+    </div>
+    <div class="hbody" style="display:none;padding:0 8px 7px">${head}${warn}${rows}</div>
+  </div>`;
+}
+
 function historyBlock(data) {
+  const fromEvents = historyFromEvents(data);
+  if (fromEvents) return fromEvents;
   const kv = KUVD_BY_PARCEL[data.c] || [];
   const dnum = (data.dkuvd || '').replace(/\/\d+$/, '');   // № уведомления на участке без суффикса «/1»
   const parcelDate = ruDate(data.ddate);
@@ -1133,7 +1176,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.72';
+const BUILD_VERSION = '5.73';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
@@ -2115,6 +2158,18 @@ function computeStats() {
     housesRR: houses.filter(h => h.rr).length
   };
 }
+// Хронология по участку (events.json) — собирается скриптом tools-build-events.py из реестра
+// документов, registrations.json, kuvd.json и полей councils. Ключ — укр. кадастр участка.
+let EVENTS = null;
+async function loadEvents() {
+  if (EVENTS === null) {
+    try { EVENTS = (await (await fetch(`events.json?v=${BUILD_VERSION}`)).json()).objects || {}; }
+    catch (e) { EVENTS = {}; }
+  }
+  return EVENTS;
+}
+loadEvents();   // грузим сразу: попап должен показывать историю с первого клика
+
 // Заявления в Росреестр (kuvd.json). На объект подаётся 2 КУВД: кадастровый учёт + регистрация права.
 let KUVD_DATA = null;
 // Индекс «укр. участок → [записи КУВД]» — для авто-истории в попапе (historyBlock)
