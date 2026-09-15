@@ -1136,11 +1136,11 @@ function togglePolygons() {
   Object.values(polygonLayers).forEach(l => { if (!map.hasLayer(l)) l.addTo(map); });
 }
 // Базовые слои
-const baseDark = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19, attribution: '© OpenStreetMap', className: 'map-tiles map-tiles-dark',
+const baseDark = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+  maxZoom: 19, attribution: '© OpenStreetMap / OSM France', className: 'map-tiles map-tiles-dark',
 });
-const baseLight = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19, attribution: '© OpenStreetMap',
+const baseLight = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+  maxZoom: 19, attribution: '© OpenStreetMap / OSM France',
 });
 const baseSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
   maxZoom: 19, attribution: '© Esri Imagery',
@@ -1176,7 +1176,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.90';
+const BUILD_VERSION = '5.91';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
