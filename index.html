@@ -1145,7 +1145,7 @@ const baseLight = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.pn
 const baseSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
   maxZoom: 19, attribution: '© Esri Imagery',
 });
-baseDark.addTo(map);
+baseSat.addTo(map);   // подложка по умолчанию — спутник (было: baseDark, схема OSM с подписями)
 
 // Dark filter только для baseDark
 const style = document.createElement('style');
@@ -1176,7 +1176,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.89';
+const BUILD_VERSION = '5.90';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
