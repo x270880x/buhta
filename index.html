@@ -1136,14 +1136,34 @@ function togglePolygons() {
   Object.values(polygonLayers).forEach(l => { if (!map.hasLayer(l)) l.addTo(map); });
 }
 // Базовые слои
-const baseDark = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
-  maxZoom: 19, attribution: '© OpenStreetMap / OSM France', className: 'map-tiles map-tiles-dark',
+// Тайлы лежат в самом репозитории (tiles/) — скачаны по площади села, зависимости от
+// чужих серверов нет. Внешний источник остаётся запасным: сработает, если тайла нет
+// локально (отъехали за край скачанной области).
+const OSM_REMOTE = 'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png';
+const SAT_REMOTE = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+function localTiles(localUrl, remoteUrl, opts) {
+  const layer = L.tileLayer(localUrl, opts);
+  layer.on('tileerror', function (e) {
+    const t = e.tile, c = e.coords;
+    if (!t || t.dataset.fallback) return;   // не зацикливаться, если и запасной не отдал
+    t.dataset.fallback = '1';
+    t.src = remoteUrl
+      .replace('{s}', 'abc'[Math.abs(c.x + c.y) % 3])
+      .replace('{z}', c.z).replace('{x}', c.x).replace('{y}', c.y);
+  });
+  return layer;
+}
+// maxNativeZoom — до какого зума реально существуют тайлы; выше Leaflet растягивает,
+// вместо того чтобы просить несуществующие плитки (иначе на z19+ были пустые квадраты).
+const baseDark = localTiles('tiles/osm/{z}/{x}/{y}.png', OSM_REMOTE, {
+  maxNativeZoom: 19, maxZoom: 21, attribution: '© OpenStreetMap / OSM France',
+  className: 'map-tiles map-tiles-dark',
 });
-const baseLight = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
-  maxZoom: 19, attribution: '© OpenStreetMap / OSM France',
+const baseLight = localTiles('tiles/osm/{z}/{x}/{y}.png', OSM_REMOTE, {
+  maxNativeZoom: 19, maxZoom: 21, attribution: '© OpenStreetMap / OSM France',
 });
-const baseSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-  maxZoom: 19, attribution: '© Esri Imagery',
+const baseSat = localTiles('tiles/sat/{z}/{x}/{y}.jpg', SAT_REMOTE, {
+  maxNativeZoom: 18, maxZoom: 21, attribution: '© Esri, Maxar, Earthstar Geographics',
 });
 baseSat.addTo(map);   // подложка по умолчанию — спутник (было: baseDark, схема OSM с подписями)
 
@@ -1176,7 +1196,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '5.91';
+const BUILD_VERSION = '5.92';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
