@@ -814,6 +814,15 @@ const flagIcon = color => L.divIcon({
       + '</div>',
   className: '', iconSize: [14, 16], iconAnchor: [6, 16]   // основание флажка в точке
 });
+// вариант флажка с жёлтым «!» — адрес в ЕГРН ещё запорожский (поле zegrn)
+const flagIconWarn = color => L.divIcon({
+  html: '<div style="position:relative;width:24px;height:16px">'
+      + `<div style="position:absolute;left:6px;top:0;width:1.5px;height:16px;background:${color.pole}"></div>`
+      + `<div style="position:absolute;left:7px;top:1px;width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:9px solid ${color.flag};filter:drop-shadow(0 1px 1px rgba(0,0,0,.6))"></div>`
+      + '<div style="position:absolute;left:16px;top:-1px;font:700 13px/13px system-ui,sans-serif;color:#e8c547;text-shadow:0 0 3px #000,0 1px 2px rgba(0,0,0,.9)">!</div>'
+      + '</div>',
+  className: '', iconSize: [24, 16], iconAnchor: [6, 16]
+});
 const rfCornerIcon = flagIcon({ pole: '#7a1010', flag: '#e23b3b' });
 const rfCornerIconGreen = flagIcon({ pole: '#0a5c2a', flag: '#2ecc71' });
 const rfCornerIconStop = flagIcon({ pole: '#7a5c10', flag: '#e8c547' });   // регистрация приостановлена
@@ -826,8 +835,16 @@ const rfCornerIconDeny = L.divIcon({
       + '</div>',
   className: '', iconSize: [21, 23], iconAnchor: [8, 23]
 });
+const rfCornerIconWarn = flagIconWarn({ pole: '#7a1010', flag: '#e23b3b' });
+const rfCornerIconGreenWarn = flagIconWarn({ pole: '#0a5c2a', flag: '#2ecc71' });
+const rfCornerIconStopWarn = flagIconWarn({ pole: '#7a5c10', flag: '#e8c547' });
+// zegrn — в ЕГРН у объекта ещё запорожский адрес: к флажку добавляется жёлтый «!»
 const flagFor = d => d.dst === 'deny' ? rfCornerIconDeny
-  : d.dst === 'stop' ? rfCornerIconStop : (d.rr ? rfCornerIconGreen : rfCornerIcon);
+  : d.dst === 'stop' ? (hasZegrn(d) ? rfCornerIconStopWarn : rfCornerIconStop)
+  : d.rr ? (hasZegrn(d) ? rfCornerIconGreenWarn : rfCornerIconGreen)
+  : (hasZegrn(d) ? rfCornerIconWarn : rfCornerIcon);
+// участок помечается «!», если запорожский адрес у него самого ЛИБО у любого его здания
+const hasZegrn = d => !!(d.zegrn || (d.blds || []).some(b => b.zegrn));
 function addRfCorners(layer, council) {
   const grp = L.layerGroup().addTo(map);
   rfCornerGroups.push(grp);
@@ -893,6 +910,17 @@ function statusBlock(d) {
   </div>`;
 }
 
+// Адрес в ЕГРН ещё запорожский (поле zegrn) — жёлтая плашка в карточке
+function zegrnBlock(d) {
+  if (!d.zegrn) return '';
+  return `<div style="margin-top:4px;padding:5px 8px;border-left:3px solid #e8c547;background:rgba(232,197,71,.07)">
+    <div style="color:#e8c547;font-weight:600">⚠️ В ЕГРН адрес ещё запорожский</div>
+    <div style="font-size:11px;color:#bbb;margin-top:3px;line-height:1.4">${escapeHtml(d.zegrn)}</div>
+    <div style="font-size:11px;color:#e8c547;margin-top:3px;font-weight:600;line-height:1.4">↻ Подать заявление о внесении в ЕГРН херсонского адреса</div>
+    ${d.zesrc ? `<div style="font-size:10px;color:#888;margin-top:2px">источник: ${escapeHtml(d.zesrc)}</div>` : ''}
+  </div>`;
+}
+
 function parcelStyle(f, council) {
   const cad = f.properties.cadnum;
   const data = council ? council.parcels.find(p => p.c === cad) : null;
@@ -951,9 +979,12 @@ function buildingsBlock(data) {
     const cadHtml = b.cad
       ? `<div style="margin-top:1px"><span style="font-family:'IBM Plex Mono',monospace;color:${green ? '#2ecc71' : '#e8c547'}">${escapeHtml(b.cad)}</span>${COPY_BTN(b.cad)}${green ? ` <span style="color:#2ecc71;font-size:10px;font-weight:600">🟢 РР ХО</span>` : ''}</div>`
       : '';
+    const warn = b.zegrn
+      ? ` <span title="В ЕГРН адрес ещё запорожский: ${escapeHtml(b.zegrn)}" style="color:#e8c547;font-weight:700;cursor:help">!</span>`
+      : '';
     return `<div style="margin-top:3px">
-      <span style="color:${green ? '#2ecc71' : '#e8e8e8'};font-weight:600">${escapeHtml(b.lit)}</span>${b.area ? `<span style="color:#aaa"> · ${escapeHtml(b.area)}</span>` : ''}
-      ${cadHtml}</div>`;
+      <span style="color:${green ? '#2ecc71' : '#e8e8e8'};font-weight:600">${escapeHtml(b.lit)}</span>${warn}${b.area ? `<span style="color:#aaa"> · ${escapeHtml(b.area)}</span>` : ''}
+      ${cadHtml}${b.zegrn ? `<div style="font-size:10px;color:#e8c547;margin-top:1px">⚠️ в ЕГРН адрес запорожский</div>` : ''}</div>`;
   }).join('');
   const n = list.length;
   return `<div style="margin-top:5px;padding:5px 8px;border:1px solid var(--border);border-radius:4px">
@@ -1123,6 +1154,7 @@ function buildParcelPopup(cad, data, council) {
       ${data.egrn ? `<div style="color:#4caf7d;font-weight:600;margin-top:2px">✓ оформлен ЕГРН${(typeof data.egrn==='string' && data.egrn && data.egrn!=='да') ? ` · ${escapeHtml(data.egrn)}` : ''}</div>` : ''}
       ${data.fias ? `<div style="margin-top:4px"><b style="color:#aaa">адрес РФ:</b> с. Бухта, ${escapeHtml(data.fias)}</div>` : ''}
       ${data.rr && !data.dst ? `<div style="color:#2ecc71;font-weight:600;margin-top:2px">🟢 Зарегистрирован в Росреестре (Херсонская обл.)</div>` : ''}
+      ${zegrnBlock(data)}
       ${statusBlock(data)}
       ${buildingsBlock(data)}
       ${data.post ? `<div style="color:#aaa;font-size:11px;margin-top:3px">постановление № ${escapeHtml(data.post)}</div>` : ''}
@@ -1196,7 +1228,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '6.7';
+const BUILD_VERSION = '6.8';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
