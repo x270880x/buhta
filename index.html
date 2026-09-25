@@ -844,7 +844,7 @@ const flagFor = d => d.dst === 'deny' ? rfCornerIconDeny
   : d.rr ? (hasZegrn(d) ? rfCornerIconGreenWarn : rfCornerIconGreen)
   : (hasZegrn(d) ? rfCornerIconWarn : rfCornerIcon);
 // участок помечается «!», если запорожский адрес у него самого ЛИБО у любого его здания
-const hasZegrn = d => !!(d.zegrn || (d.blds || []).some(b => b.zegrn));
+const hasZegrn = d => !!(d.zegrn || d.needv || (d.blds || []).some(b => b.zegrn || b.needv));
 function addRfCorners(layer, council) {
   const grp = L.layerGroup().addTo(map);
   rfCornerGroups.push(grp);
@@ -911,6 +911,16 @@ function statusBlock(d) {
 }
 
 // Адрес в ЕГРН ещё запорожский (поле zegrn) — жёлтая плашка в карточке
+// Смена адреса подтверждена только уведомлением — нужна свежая выписка (поле needv)
+function needvBlock(d) {
+  if (!d.needv) return '';
+  return `<div style="margin-top:4px;padding:5px 8px;border-left:3px solid #e8c547;background:rgba(232,197,71,.07)">
+    <div style="color:#e8c547;font-weight:600">⚠️ Перепроверить — нужна свежая выписка</div>
+    <div style="font-size:11px;color:#bbb;margin-top:3px;line-height:1.4">${escapeHtml(d.needv)}</div>
+    <div style="font-size:11px;color:#e8c547;margin-top:3px;font-weight:600;line-height:1.4">↻ Заказать выписку из ЕГРН по этому кадастровому номеру</div>
+  </div>`;
+}
+
 function zegrnBlock(d) {
   if (!d.zegrn) return '';
   return `<div style="margin-top:4px;padding:5px 8px;border-left:3px solid #e8c547;background:rgba(232,197,71,.07)">
@@ -1155,6 +1165,7 @@ function buildParcelPopup(cad, data, council) {
       ${data.fias ? `<div style="margin-top:4px"><b style="color:#aaa">адрес РФ:</b> с. Бухта, ${escapeHtml(data.fias)}</div>` : ''}
       ${data.rr && !data.dst ? `<div style="color:#2ecc71;font-weight:600;margin-top:2px">🟢 Зарегистрирован в Росреестре (Херсонская обл.)</div>` : ''}
       ${zegrnBlock(data)}
+      ${needvBlock(data)}
       ${statusBlock(data)}
       ${buildingsBlock(data)}
       ${data.post ? `<div style="color:#aaa;font-size:11px;margin-top:3px">постановление № ${escapeHtml(data.post)}</div>` : ''}
@@ -1228,7 +1239,7 @@ egrnControl.onAdd = function () {
 egrnControl.addTo(map);
 
 // Тех-инфо справа внизу: версия + текущий зум (вместо attribution)
-const BUILD_VERSION = '6.8';
+const BUILD_VERSION = '6.9';
 const techInfo = L.control({ position: 'bottomright' });
 techInfo.onAdd = function () {
   const d = L.DomUtil.create('div', 'techinfo');
